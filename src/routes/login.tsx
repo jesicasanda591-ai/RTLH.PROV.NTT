@@ -13,7 +13,8 @@ export const Route = createFileRoute("/login")({
     // Pindahkan pengecekan ke beforeLoad agar tidak ada "flicker" halaman login
     // Tetap gunakan pengamanan SSR typeof window
     if (typeof window !== "undefined") {
-      if (localStorage.getItem("auth_token")) {
+      // UBAH HANYA DI SINI: localStorage menjadi sessionStorage
+      if (sessionStorage.getItem("auth_token")) {
         throw redirect({ to: "/" });
       }
     }
@@ -41,8 +42,9 @@ function LoginPage() {
     // Simulasi pengecekan ke server (mocking auth)
     setTimeout(() => {
       if (password === `user_${username}`) {
-        localStorage.setItem("auth_token", "mock-development-token-12345");
-        localStorage.setItem("user_kabupaten", username);
+        // UBAH HANYA DI SINI: localStorage menjadi sessionStorage
+        sessionStorage.setItem("auth_token", "mock-development-token-12345");
+        sessionStorage.setItem("user_kabupaten", username);
         
         // Gunakan invalidate agar TanStack Router me-refresh context auth
         router.invalidate().then(() => {
