@@ -1,5 +1,5 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
-import { Home, LayoutDashboard, Database, MapPin, Map, FilePlus2, Activity, Menu, X, Building2, ShieldCheck, LogOut, ChevronDown } from "lucide-react";
+import { Home, LayoutDashboard, Database, MapPin, Map, FilePlus2, Activity, Menu, X, Building2, ShieldCheck, LogOut, LogIn, ChevronDown } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
@@ -21,22 +21,32 @@ export function SiteNavbar() {
   // State untuk kontrol visibilitas menu logout dropdown
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   
-  // State untuk menyimpan nama kabupaten yang sedang login
-  const [userKabupaten, setUserKabupaten] = useState<string>("Kota Kupang");
+  // State untuk status login & nama kabupaten
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userKabupaten, setUserKabupaten] = useState<string>("");
 
   // Mengambil sesi wilayah login secara aman saat komponen dimuat
   useEffect(() => {
-    const sessionKabupaten = localStorage.getItem("user_kabupaten");
-    if (sessionKabupaten) {
-      setUserKabupaten(sessionKabupaten);
+    // SINKRONISASI: Kita gunakan sessionStorage agar sesuai dengan sistem login baru
+    const token = sessionStorage.getItem("auth_token");
+    const sessionKabupaten = sessionStorage.getItem("user_kabupaten");
+    
+    if (token) {
+      setIsAuthenticated(true);
+      if (sessionKabupaten) {
+        setUserKabupaten(sessionKabupaten);
+      }
     }
   }, []);
 
   // Fungsi penanganan keluar dari akun pengguna
   const handleLogout = () => {
-    localStorage.removeItem("auth_token");
-    localStorage.removeItem("user_role");
-    localStorage.removeItem("user_kabupaten");
+    // SINKRONISASI: Hapus dari sessionStorage
+    sessionStorage.removeItem("auth_token");
+    sessionStorage.removeItem("user_role");
+    sessionStorage.removeItem("user_kabupaten");
+    
+    setIsAuthenticated(false);
     setIsDropdownOpen(false);
     setOpen(false);
     navigate({ to: "/login" });
@@ -77,42 +87,55 @@ export function SiteNavbar() {
           })}
         </nav>
 
-        {/* SISI KANAN DESKTOP: Informasi Akun Wilayah Interaktif dengan Menu Log Out (Sesuai image_5e3d01.png) */}
+        {/* SISI KANAN DESKTOP: Logika Otomatis Profil vs Tombol Login */}
         <div className="hidden lg:flex relative">
-          <button
-            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="inline-flex items-center gap-2.5 rounded-full border border-border bg-primary-soft/30 hover:bg-primary-soft/60 pl-2 pr-4 py-1.5 shadow-soft transition-colors focus:outline-none text-left"
-          >
-            {/* Badge Lingkaran Ikon */}
-            <div className="grid h-7 w-7 place-items-center rounded-full bg-primary-deep text-white shadow-sm shrink-0">
-              <Building2 className="h-3.5 w-3.5" />
-            </div>
-            {/* Teks Deskripsi */}
-            <div className="flex flex-col leading-none">
-              <span className="text-xs font-bold text-primary-deep max-w-[140px] truncate capitalize">
-                {userKabupaten.toLowerCase().replace("kabupaten ", "").replace("kota ", "")}
-              </span>
-              <span className="text-[9px] font-semibold text-muted-foreground mt-0.5 uppercase tracking-wider flex items-center gap-0.5">
-                <ShieldCheck className="h-2.5 w-2.5 text-emerald-600" /> Admin Wilayah
-              </span>
-            </div>
-            <ChevronDown className={cn("h-3.5 w-3.5 text-primary-deep ml-1 transition-transform", isDropdownOpen && "rotate-180")} />
-          </button>
-
-          {/* Popover Dropdown Log Out Desktop */}
-          {isDropdownOpen && (
+          {isAuthenticated ? (
             <>
-              <div className="fixed inset-0 z-40" onClick={() => setIsDropdownOpen(false)} />
-              <div className="absolute right-0 mt-12 w-52 bg-white rounded-xl border border-border shadow-xl z-50 py-1.5 animate-fadeIn">
-                <button
-                  onClick={handleLogout}
-                  className="w-full px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors text-left"
-                >
-                  <LogOut className="h-4 w-4 shrink-0" />
-                  Keluar / Log Out
-                </button>
-              </div>
+              <button
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="inline-flex items-center gap-2.5 rounded-full border border-border bg-primary-soft/30 hover:bg-primary-soft/60 pl-2 pr-4 py-1.5 shadow-soft transition-colors focus:outline-none text-left"
+              >
+                {/* Badge Lingkaran Ikon */}
+                <div className="grid h-7 w-7 place-items-center rounded-full bg-primary-deep text-white shadow-sm shrink-0">
+                  <Building2 className="h-3.5 w-3.5" />
+                </div>
+                {/* Teks Deskripsi */}
+                <div className="flex flex-col leading-none">
+                  <span className="text-xs font-bold text-primary-deep max-w-[140px] truncate capitalize">
+                    {userKabupaten.toLowerCase().replace("kabupaten ", "").replace("kota ", "")}
+                  </span>
+                  <span className="text-[9px] font-semibold text-muted-foreground mt-0.5 uppercase tracking-wider flex items-center gap-0.5">
+                    <ShieldCheck className="h-2.5 w-2.5 text-emerald-600" /> Admin Wilayah
+                  </span>
+                </div>
+                <ChevronDown className={cn("h-3.5 w-3.5 text-primary-deep ml-1 transition-transform", isDropdownOpen && "rotate-180")} />
+              </button>
+
+              {/* Popover Dropdown Log Out Desktop */}
+              {isDropdownOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setIsDropdownOpen(false)} />
+                  <div className="absolute right-0 mt-12 w-52 bg-white rounded-xl border border-border shadow-xl z-50 py-1.5 animate-fadeIn">
+                    <button
+                      onClick={handleLogout}
+                      className="w-full px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors text-left"
+                    >
+                      <LogOut className="h-4 w-4 shrink-0" />
+                      Keluar / Log Out
+                    </button>
+                  </div>
+                </>
+              )}
             </>
+          ) : (
+            // TOMBOL LOGIN JIKA BELUM MASUK (DESKTOP)
+            <Link
+              to="/login"
+              className="inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-2 text-sm font-bold text-accent-gold-foreground shadow-gold transition-transform hover:scale-105"
+            >
+              <LogIn className="h-4 w-4" />
+              Login
+            </Link>
           )}
         </div>
 
@@ -131,23 +154,35 @@ export function SiteNavbar() {
         <div className="border-t border-border bg-background/95 backdrop-blur lg:hidden">
           <div className="grid gap-1 px-4 py-3">
             
-            {/* Informasi Kabupaten di bagian paling atas menu mobile + Tombol Keluar Langsung */}
-            <div className="flex items-center justify-between p-3 mb-2 rounded-lg bg-primary-soft/40 border border-border/40">
-              <div className="flex items-center gap-3">
-                <Building2 className="h-4 w-4 text-primary-deep shrink-0" />
-                <div className="flex flex-col leading-none">
-                  <span className="text-xs font-bold text-primary-deep">{userKabupaten}</span>
-                  <span className="text-[9px] font-medium text-muted-foreground mt-1">Otoritas Sesi Aktif</span>
+            {/* Bagian Atas Mobile Menu: Cek Login atau Belum */}
+            {isAuthenticated ? (
+              <div className="flex items-center justify-between p-3 mb-2 rounded-lg bg-primary-soft/40 border border-border/40">
+                <div className="flex items-center gap-3">
+                  <Building2 className="h-4 w-4 text-primary-deep shrink-0" />
+                  <div className="flex flex-col leading-none">
+                    <span className="text-xs font-bold text-primary-deep">{userKabupaten}</span>
+                    <span className="text-[9px] font-medium text-muted-foreground mt-1">Otoritas Sesi Aktif</span>
+                  </div>
                 </div>
+                <button
+                  onClick={handleLogout}
+                  title="Log Out"
+                  className="p-1.5 rounded-md bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 transition-colors"
+                >
+                  <LogOut className="h-4 w-4" />
+                </button>
               </div>
-              <button
-                onClick={handleLogout}
-                title="Log Out"
-                className="p-1.5 rounded-md bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 transition-colors"
+            ) : (
+              // TOMBOL LOGIN JIKA BELUM MASUK (MOBILE)
+              <Link
+                to="/login"
+                onClick={() => setOpen(false)}
+                className="flex items-center justify-center gap-2 p-3 mb-2 rounded-lg bg-[#ffc107] text-black font-bold shadow-md hover:bg-[#e0a800] transition-colors"
               >
-                <LogOut className="h-4 w-4" />
-              </button>
-            </div>
+                <LogIn className="h-4 w-4" />
+                Masuk ke Sistem
+              </Link>
+            )}
 
             {items.map((it) => {
               const Icon = it.icon;
