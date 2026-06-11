@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { PageShell } from "@/components/page-shell";
-import { ClipboardCheck, ArrowRight, Save, CheckCircle, Loader2, FolderOpen, ExternalLink } from "lucide-react";
+// UBAH: Menambahkan AlertCircle untuk ikon Pop-up peringatan
+import { ClipboardCheck, ArrowRight, Save, CheckCircle, Loader2, FolderOpen, ExternalLink, AlertCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
-// UBAH: Tambahkan getRtlhRows untuk menarik data lama
 import { saveDataToSheet, getRtlhRows } from "@/lib/api"; 
 
 const KABUPATEN_NTT = [
@@ -37,13 +37,20 @@ function SubmitPage() {
   const [generatedId, setGeneratedId] = useState("");
   const [generatedFolderUrl, setGeneratedFolderUrl] = useState(""); 
   
+  // UBAH: State baru untuk mengontrol kustom pop-up peringatan
+  const [alertModal, setAlertModal] = useState({
+    show: false,
+    title: "",
+    message: "",
+    type: "error" as "error" | "warning"
+  });
+  
   const [formData, setFormData] = useState({
     nama: "", nik: "", phone: "", email: "",
     kabupaten: isProvinsi ? "" : userKab, alamat: "", kecamatan: "", kelurahan: "", rt: "", rw: "",
     lat: "", long: ""
   });
 
-  // UBAH: Tarik data spreadsheet yang sudah ada untuk keperluan validasi
   const { data: existingData = [], isLoading: isCheckingData } = useQuery({
     queryKey: ["rtlhRows"],
     queryFn: getRtlhRows,
@@ -61,13 +68,24 @@ function SubmitPage() {
   const handleNextStep = (currentStep: number) => {
     if (currentStep === 1) {
       if (!formData.nama || formData.nik.length !== 16 || !formData.phone) {
-        alert("Mohon lengkapi Nama, NIK (harus 16 digit), dan No. Telepon!");
+        // UBAH: Menggunakan kustom pop-up
+        setAlertModal({ 
+          show: true, 
+          title: "Data Belum Lengkap", 
+          message: "Mohon lengkapi Nama, NIK (harus 16 digit), dan No. Telepon!", 
+          type: "warning" 
+        });
         return;
       }
 
-      // UBAH: Logika Pengecekan Duplikasi (Anti-Double Input)
       if (isCheckingData) {
-        alert("Sistem sedang memuat database untuk validasi. Mohon tunggu beberapa detik dan coba lagi.");
+        // UBAH: Menggunakan kustom pop-up
+        setAlertModal({ 
+          show: true, 
+          title: "Sistem Sedang Memuat", 
+          message: "Sistem sedang memuat database untuk validasi anti-duplikasi. Mohon tunggu beberapa detik dan coba klik kembali.", 
+          type: "warning" 
+        });
         return;
       }
 
@@ -77,14 +95,26 @@ function SubmitPage() {
       );
 
       if (isDuplicate) {
-        alert(`PENGAJUAN DITOLAK!\n\nNama atau NIK ini sudah terdaftar di sistem pada wilayah ${isDuplicate.kabupaten || "lain"}. Tidak diizinkan melakukan pengajuan ganda.`);
+        // UBAH: Menggunakan kustom pop-up untuk penolakan
+        setAlertModal({ 
+          show: true, 
+          title: "PENGAJUAN DITOLAK!", 
+          message: `Nama atau NIK ini sudah terdaftar di sistem pada wilayah ${isDuplicate.kabupaten || "lain"}.\n\nTidak diizinkan melakukan pengajuan ganda untuk individu yang sama.`, 
+          type: "error" 
+        });
         return;
       }
 
       setStep(2);
     } else if (currentStep === 2) {
       if (!formData.kabupaten || !formData.alamat || !formData.kecamatan || !formData.kelurahan || !formData.rt || !formData.rw || !formData.lat || !formData.long) {
-        alert("Mohon lengkapi semua data lokasi bertanda bintang (*)");
+        // UBAH: Menggunakan kustom pop-up
+        setAlertModal({ 
+          show: true, 
+          title: "Lokasi Belum Lengkap", 
+          message: "Mohon lengkapi semua data lokasi yang bertanda bintang (*)", 
+          type: "warning" 
+        });
         return;
       }
       setStep(3);
@@ -111,7 +141,13 @@ function SubmitPage() {
       }
     } catch (error: any) {
       console.error("Error submit data:", error);
-      alert(error.message || "Gagal mengirim data. Pastikan koneksi lancar.");
+      // UBAH: Menggunakan kustom pop-up untuk error pengiriman
+      setAlertModal({ 
+        show: true, 
+        title: "Gagal Mengirim Data", 
+        message: error.message || "Gagal mengirim data ke server. Pastikan koneksi internet Anda lancar.", 
+        type: "error" 
+      });
     } finally {
       setLoading(false);
     }
@@ -316,6 +352,35 @@ function SubmitPage() {
           )}
         </div>
       </div>
+
+      {/* UBAH: KUSTOM POP-UP MODAL PERINGATAN / ERROR */}
+      {alertModal.show && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#072456]/40 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className={`flex items-center gap-3 px-6 py-4 ${alertModal.type === 'error' ? 'bg-red-50 border-b border-red-100' : 'bg-amber-50 border-b border-amber-100'}`}>
+              <AlertCircle className={`h-6 w-6 shrink-0 ${alertModal.type === 'error' ? 'text-red-600' : 'text-amber-600'}`} />
+              <h3 className={`text-sm font-extrabold uppercase tracking-wide ${alertModal.type === 'error' ? 'text-red-900' : 'text-amber-900'}`}>
+                {alertModal.title}
+              </h3>
+            </div>
+            
+            <div className="p-6">
+              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                {alertModal.message}
+              </p>
+            </div>
+            
+            <div className="bg-gray-50 px-6 py-4 flex justify-end border-t border-gray-100">
+              <button
+                onClick={() => setAlertModal({ ...alertModal, show: false })}
+                className="rounded-xl bg-[#072456] px-6 py-2.5 text-sm font-bold text-white shadow-md transition-all hover:bg-[#0a3275] active:scale-95"
+              >
+                Tutup Peringatan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </PageShell>
   );
 }
