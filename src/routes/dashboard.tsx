@@ -20,7 +20,8 @@ export const Route = createFileRoute("/dashboard")({
   beforeLoad: () => {
     // --- PENAMBAHAN PENGAMANAN SSR ---
     if (typeof window !== "undefined") {
-      const isAuthenticated = localStorage.getItem("auth_token");
+      // UBAH DI SINI: Mendukung sessionStorage dan localStorage sekaligus
+      const isAuthenticated = sessionStorage.getItem("auth_token") || localStorage.getItem("auth_token");
       if (!isAuthenticated) {
         throw redirect({ to: "/login" });
       }
@@ -178,7 +179,6 @@ function DashboardPage() {
             <h3 className="text-base font-bold text-primary-deep">Progres Kabupaten</h3>
             {isLoading ? <LoadingSpinner /> : (
               <div className="mt-5 flex flex-col gap-5 h-72 overflow-y-auto pr-2">
-                {/* Menggunakan array yang sudah di-copy dan di-sort dari useMemo */}
                 {sortedDistricts.map((d: any, i: number) => {
                   const percentage = d.total > 0 ? Math.round((d.assisted / d.total) * 100) : 0;
                   return (
