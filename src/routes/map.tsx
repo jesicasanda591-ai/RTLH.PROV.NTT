@@ -1,12 +1,13 @@
 import { useState, useMemo, useEffect } from "react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { PageShell } from "@/components/page-shell"; // Hapus PageHeader, kita pakai custom section
+import { PageShell } from "@/components/page-shell"; 
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+// UBAH: Tambahkan icon Search
 import { 
   Maximize2, Loader2, ArrowRight, X, User, MapPin, 
-  FileText, Home, FolderOpen, Folder 
+  FileText, Home, FolderOpen, Folder, Search 
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getDistricts, getRtlhRows, RtlhData, DistrictData } from "@/lib/api";
@@ -43,12 +44,13 @@ function MapBoundsUpdater({ rows }: { rows: RtlhData[] }) {
 
 function MapPage() {
   const [kec, setKec] = useState("all");
+  // UBAH: Tambahkan state untuk pencarian nama
+  const [searchName, setSearchName] = useState("");
   const [detail, setDetail] = useState<RtlhData | null>(null);
 
   const userKab = typeof window !== "undefined" ? (sessionStorage.getItem("user_kabupaten") || localStorage.getItem("user_kabupaten") || "") : "";
   const isProvinsi = userKab.toLowerCase() === "provinsi" || userKab.toLowerCase() === "admin";
   
-  // Format nama kabupaten untuk tampilan dropdown agar lebih rapi
   const displayUserKab = userKab ? userKab.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : "Kabupaten Anda";
 
   const { data: districts = [] } = useQuery<DistrictData[]>({ queryKey: ["districtsData"], queryFn: getDistricts });
@@ -60,15 +62,18 @@ function MapPage() {
     return activeRows.filter((r) => {
       const rowKab = String(r.kabupaten || "").toLowerCase();
       
-      // PERBAIKAN 1: Gunakan .includes() agar "Kota Kupang" bisa cocok dengan data login "Kupang"
       const matchKec = isProvinsi 
         ? (kec === "all" || rowKab.includes(kec.toLowerCase()))
         : (rowKab.includes(userKab.toLowerCase()));
 
       const isValidCoords = r.lat !== 0 && r.lng !== 0 && !isNaN(r.lat) && !isNaN(r.lng);
-      return matchKec && isValidCoords;
+      
+      // UBAH: Logika pencarian nama (real-time)
+      const matchName = searchName === "" || String(r.nama || "").toLowerCase().includes(searchName.toLowerCase());
+
+      return matchKec && isValidCoords && matchName;
     });
-  }, [activeRows, kec, isProvinsi, userKab]);
+  }, [activeRows, kec, isProvinsi, userKab, searchName]);
 
   const getColor = (kondisi?: string) => {
     const k = String(kondisi).toLowerCase();
@@ -79,7 +84,6 @@ function MapPage() {
 
   return (
     <PageShell>
-      {/* PERBAIKAN 2: Desain Header diperbarui agar sejajar dengan desain web dan tidak tertutup Navbar */}
       <section className="relative w-full bg-[#072456] pb-24 pt-16 lg:pt-20 lg:pb-32">
         <div className="absolute inset-0 bg-gradient-to-r from-[#031433] via-transparent to-[#0a3275] opacity-50" />
         <div className="relative mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-8">
@@ -92,7 +96,19 @@ function MapPage() {
       <div className="relative z-10 mx-auto -mt-16 max-w-[1600px] px-4 pb-16 lg:px-8">
         {/* Kontrol Filter */}
         <div className="mb-6 flex flex-wrap items-center gap-4 rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm">
-          {/* PERBAIKAN 3: Berikan min-w-[220px] agar dropdown tidak menyusut/rusak */}
+          
+          {/* UBAH: Input Pencarian Nama */}
+          <div className="relative flex-grow sm:flex-grow-0 sm:min-w-[280px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Cari nama penerima..."
+              value={searchName}
+              onChange={(e) => setSearchName(e.target.value)}
+              className="h-11 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-4 text-sm focus:border-blue-500 focus:outline-none text-slate-800"
+            />
+          </div>
+
           <select
             value={isProvinsi ? kec : userKab}
             onChange={(e) => setKec(e.target.value)}
