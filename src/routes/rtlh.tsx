@@ -14,7 +14,9 @@ export const Route = createFileRoute("/rtlh")({
   beforeLoad: () => {
     // Pengamanan SSR agar tidak crash di server
     if (typeof window !== "undefined") {
-      if (!localStorage.getItem("auth_token")) {
+      // UBAH 1: Cek kedua brankas
+      const isAuthenticated = sessionStorage.getItem("auth_token") || localStorage.getItem("auth_token");
+      if (!isAuthenticated) {
         throw redirect({ to: "/login" });
       }
     }
@@ -32,7 +34,9 @@ function RtlhPage() {
   const [toast, setToast] = useState<{ message: string } | null>(null);
 
   const perPage = 8;
-  const userKab = typeof window !== "undefined" ? localStorage.getItem("user_kabupaten") || "" : "";
+  
+  // UBAH 2: Cek kedua brankas untuk mengambil nama kabupaten
+  const userKab = typeof window !== "undefined" ? (sessionStorage.getItem("user_kabupaten") || localStorage.getItem("user_kabupaten") || "") : "";
   const isProvinsi = userKab.toLowerCase() === "provinsi" || userKab.toLowerCase() === "admin";
 
   // Auto-hide Toast

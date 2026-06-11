@@ -17,7 +17,9 @@ const KABUPATEN_NTT = [
 export const Route = createFileRoute("/submit")({
   beforeLoad: () => { 
     if (typeof window !== 'undefined') {
-      if (!localStorage.getItem("auth_token")) {
+      // UBAH DI SINI: Cek kedua brankas penyimpanan untuk token login
+      const isAuthenticated = sessionStorage.getItem("auth_token") || localStorage.getItem("auth_token");
+      if (!isAuthenticated) {
         throw redirect({ to: "/login" });
       }
     }

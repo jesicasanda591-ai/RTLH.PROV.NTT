@@ -42,7 +42,8 @@ export const Route = createFileRoute("/monitoring")({
   head: () => ({ meta: [{ title: "Monitoring & Kontrol RTLH · SIM-RTLH" }] }),
   beforeLoad: () => {
     if (typeof window !== "undefined") {
-      const isAuthenticated = localStorage.getItem("auth_token");
+      // UBAH 1: Cek kedua brankas untuk token login
+      const isAuthenticated = sessionStorage.getItem("auth_token") || localStorage.getItem("auth_token");
       if (!isAuthenticated) throw redirect({ to: "/login" });
     }
   },
@@ -56,7 +57,8 @@ export function MonitoringPage() {
   // State untuk Toast Notification
   const [showToast, setShowToast] = useState(false);
   
-  const userKab = typeof window !== "undefined" ? (localStorage.getItem("user_kabupaten") || "") : "";
+  // UBAH 2: Cek kedua brankas untuk mengambil nama kabupaten agar filter dan izin admin tidak rusak
+  const userKab = typeof window !== "undefined" ? (sessionStorage.getItem("user_kabupaten") || localStorage.getItem("user_kabupaten") || "") : "";
   const isProvinsi = userKab.toLowerCase() === "provinsi" || userKab.toLowerCase() === "admin";
   
   const [selectedKabupaten, setSelectedKabupaten] = useState<string>(isProvinsi ? "Kota Kupang" : userKab);

@@ -12,7 +12,9 @@ export const Route = createFileRoute("/districts/$id")({
   beforeLoad: () => {
     // Pengamanan SSR & Proteksi Halaman Internal
     if (typeof window !== "undefined") {
-      if (!localStorage.getItem("auth_token")) {
+      // UBAH DI SINI: Cek kedua brankas
+      const isAuthenticated = sessionStorage.getItem("auth_token") || localStorage.getItem("auth_token");
+      if (!isAuthenticated) {
         throw redirect({ to: "/login" });
       }
     }

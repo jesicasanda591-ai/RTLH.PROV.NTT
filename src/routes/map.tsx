@@ -18,7 +18,9 @@ export const Route = createFileRoute("/map")({
   head: () => ({ meta: [{ title: "Peta RTLH · SIM-RTLH · NTT" }] }),
   beforeLoad: () => {
     if (typeof window !== "undefined") {
-      if (!localStorage.getItem("auth_token")) {
+      // UBAH DI SINI: Cek kedua tempat penyimpanan (sessionStorage & localStorage)
+      const isAuthenticated = sessionStorage.getItem("auth_token") || localStorage.getItem("auth_token");
+      if (!isAuthenticated) {
         throw redirect({ to: "/login" });
       }
     }
