@@ -22,7 +22,8 @@ export const Route = createFileRoute("/")({
   beforeLoad: () => {
     // --- PENAMBAHAN PENGAMANAN SSR DI SINI ---
     if (typeof window !== "undefined") {
-      const isAuthenticated = localStorage.getItem("auth_token");
+      // UBAH DI SINI: Cek kedua tempat penyimpanan (session & local)
+      const isAuthenticated = sessionStorage.getItem("auth_token") || localStorage.getItem("auth_token");
       if (!isAuthenticated) throw redirect({ to: "/login" });
     }
     // -----------------------------------------
