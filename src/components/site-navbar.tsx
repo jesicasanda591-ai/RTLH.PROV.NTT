@@ -25,11 +25,30 @@ export function SiteNavbar() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userKabupaten, setUserKabupaten] = useState<string>("");
 
+  // FUNGSI BARU: Untuk memformat nama kabupaten di Navbar agar lebih rapi & jelas
+  const formatDisplayName = (name: string) => {
+    if (!name) return "";
+    const lower = name.toLowerCase().trim();
+    
+    // Penanganan khusus untuk Kupang & Provinsi
+    if (lower === "provinsi" || lower === "admin") return "Provinsi NTT";
+    if (lower === "kota kupang") return "Kota Kupang";
+    if (lower === "kupang" || lower === "kab. kupang" || lower === "kabupaten kupang") return "Kabupaten Kupang";
+    
+    // Penanganan otomatis untuk daerah lain
+    if (lower.startsWith("kota ")) return name.replace(/\b\w/g, c => c.toUpperCase());
+    if (lower.startsWith("kab. ")) return name.replace(/kab\./i, "Kabupaten").replace(/\b\w/g, c => c.toUpperCase());
+    if (lower.startsWith("kabupaten ")) return name.replace(/\b\w/g, c => c.toUpperCase());
+    
+    // Jika user hanya mengetik "Ende", otomatis jadi "Kabupaten Ende"
+    return `Kabupaten ${name.replace(/\b\w/g, c => c.toUpperCase())}`;
+  };
+
   // Mengambil sesi wilayah login secara aman saat komponen dimuat
   useEffect(() => {
-    // SINKRONISASI: Kita gunakan sessionStorage agar sesuai dengan sistem login baru
-    const token = sessionStorage.getItem("auth_token");
-    const sessionKabupaten = sessionStorage.getItem("user_kabupaten");
+    // SINKRONISASI: Baca token dan wilayah dari session DAN local storage
+    const token = sessionStorage.getItem("auth_token") || localStorage.getItem("auth_token");
+    const sessionKabupaten = sessionStorage.getItem("user_kabupaten") || localStorage.getItem("user_kabupaten");
     
     if (token) {
       setIsAuthenticated(true);
@@ -41,10 +60,14 @@ export function SiteNavbar() {
 
   // Fungsi penanganan keluar dari akun pengguna
   const handleLogout = () => {
-    // SINKRONISASI: Hapus dari sessionStorage
+    // SINKRONISASI: Hapus dari sessionStorage DAN localStorage
     sessionStorage.removeItem("auth_token");
     sessionStorage.removeItem("user_role");
     sessionStorage.removeItem("user_kabupaten");
+    
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("user_role");
+    localStorage.removeItem("user_kabupaten");
     
     setIsAuthenticated(false);
     setIsDropdownOpen(false);
@@ -102,7 +125,8 @@ export function SiteNavbar() {
                 {/* Teks Deskripsi */}
                 <div className="flex flex-col leading-none">
                   <span className="text-xs font-bold text-primary-deep max-w-[140px] truncate capitalize">
-                    {userKabupaten.toLowerCase().replace("kabupaten ", "").replace("kota ", "")}
+                    {/* UBAH: Terapkan formatDisplayName ke UI Desktop */}
+                    {formatDisplayName(userKabupaten)}
                   </span>
                   <span className="text-[9px] font-semibold text-muted-foreground mt-0.5 uppercase tracking-wider flex items-center gap-0.5">
                     <ShieldCheck className="h-2.5 w-2.5 text-emerald-600" /> Admin Wilayah
@@ -160,7 +184,8 @@ export function SiteNavbar() {
                 <div className="flex items-center gap-3">
                   <Building2 className="h-4 w-4 text-primary-deep shrink-0" />
                   <div className="flex flex-col leading-none">
-                    <span className="text-xs font-bold text-primary-deep">{userKabupaten}</span>
+                    {/* UBAH: Terapkan formatDisplayName ke UI Mobile */}
+                    <span className="text-xs font-bold text-primary-deep">{formatDisplayName(userKabupaten)}</span>
                     <span className="text-[9px] font-medium text-muted-foreground mt-1">Otoritas Sesi Aktif</span>
                   </div>
                 </div>
