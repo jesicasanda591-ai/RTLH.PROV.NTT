@@ -2,9 +2,10 @@ import { useState } from "react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { PageShell } from "@/components/page-shell";
 import { ClipboardCheck, ArrowRight, Save, CheckCircle, Loader2, FolderOpen, ExternalLink } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
-// Sesuaikan path import ini jika letak folder lib Anda berbeda
-import { saveDataToSheet } from "@/lib/api"; 
+// UBAH: Tambahkan getRtlhRows untuk menarik data lama
+import { saveDataToSheet, getRtlhRows } from "@/lib/api"; 
 
 const KABUPATEN_NTT = [
   "Kota Kupang", "Kab. Kupang", "Kab. Timor Tengah Selatan", "Kab. Timor Tengah Utara", 
@@ -17,7 +18,6 @@ const KABUPATEN_NTT = [
 export const Route = createFileRoute("/submit")({
   beforeLoad: () => { 
     if (typeof window !== 'undefined') {
-      // UBAH DI SINI: Cek kedua brankas penyimpanan untuk token login
       const isAuthenticated = sessionStorage.getItem("auth_token") || localStorage.getItem("auth_token");
       if (!isAuthenticated) {
         throw redirect({ to: "/login" });
@@ -28,7 +28,6 @@ export const Route = createFileRoute("/submit")({
 });
 
 function SubmitPage() {
-  // AMBIL DATA USER UNTUK MENGUNCI KABUPATEN
   const userKab = typeof window !== "undefined" ? (sessionStorage.getItem("user_kabupaten") || localStorage.getItem("user_kabupaten") || "") : "";
   const isProvinsi = userKab.toLowerCase() === "provinsi" || userKab.toLowerCase() === "admin";
 
@@ -42,6 +41,12 @@ function SubmitPage() {
     nama: "", nik: "", phone: "", email: "",
     kabupaten: isProvinsi ? "" : userKab, alamat: "", kecamatan: "", kelurahan: "", rt: "", rw: "",
     lat: "", long: ""
+  });
+
+  // UBAH: Tarik data spreadsheet yang sudah ada untuk keperluan validasi
+  const { data: existingData = [], isLoading: isCheckingData } = useQuery({
+    queryKey: ["rtlhRows"],
+    queryFn: getRtlhRows,
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -59,6 +64,23 @@ function SubmitPage() {
         alert("Mohon lengkapi Nama, NIK (harus 16 digit), dan No. Telepon!");
         return;
       }
+
+      // UBAH: Logika Pengecekan Duplikasi (Anti-Double Input)
+      if (isCheckingData) {
+        alert("Sistem sedang memuat database untuk validasi. Mohon tunggu beberapa detik dan coba lagi.");
+        return;
+      }
+
+      const isDuplicate = existingData.find((item: any) => 
+        item.nik === formData.nik || 
+        item.nama.toLowerCase().trim() === formData.nama.toLowerCase().trim()
+      );
+
+      if (isDuplicate) {
+        alert(`PENGAJUAN DITOLAK!\n\nNama atau NIK ini sudah terdaftar di sistem pada wilayah ${isDuplicate.kabupaten || "lain"}. Tidak diizinkan melakukan pengajuan ganda.`);
+        return;
+      }
+
       setStep(2);
     } else if (currentStep === 2) {
       if (!formData.kabupaten || !formData.alamat || !formData.kecamatan || !formData.kelurahan || !formData.rt || !formData.rw || !formData.lat || !formData.long) {
@@ -79,7 +101,6 @@ function SubmitPage() {
 
       if (result && result.status === "success") {
         setIsSubmitted(true);
-        // Menambahkan fallback || "" agar TypeScript tidak error
         setGeneratedId(result.id || ""); 
         
         if (result.folderUrl) {
