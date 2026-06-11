@@ -28,6 +28,10 @@ export const Route = createFileRoute("/submit")({
 });
 
 function SubmitPage() {
+  // AMBIL DATA USER UNTUK MENGUNCI KABUPATEN
+  const userKab = typeof window !== "undefined" ? (sessionStorage.getItem("user_kabupaten") || localStorage.getItem("user_kabupaten") || "") : "";
+  const isProvinsi = userKab.toLowerCase() === "provinsi" || userKab.toLowerCase() === "admin";
+
   const [step, setStep] = useState(1);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -36,7 +40,7 @@ function SubmitPage() {
   
   const [formData, setFormData] = useState({
     nama: "", nik: "", phone: "", email: "",
-    kabupaten: "", alamat: "", kecamatan: "", kelurahan: "", rt: "", rw: "",
+    kabupaten: isProvinsi ? "" : userKab, alamat: "", kecamatan: "", kelurahan: "", rt: "", rw: "",
     lat: "", long: ""
   });
 
@@ -208,7 +212,24 @@ function SubmitPage() {
               {step === 2 && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div className="sm:col-span-2"><label className={labelClass}>KABUPATEN/KOTA *</label><select name="kabupaten" className={inputClass} value={formData.kabupaten} onChange={handleChange}><option value="">Pilih Kabupaten</option>{KABUPATEN_NTT.map(k => <option key={k} value={k}>{k}</option>)}</select></div>
+                    <div className="sm:col-span-2">
+                      <label className={labelClass}>KABUPATEN/KOTA *</label>
+                      <select 
+                        name="kabupaten" 
+                        className={`${inputClass} ${!isProvinsi ? 'bg-gray-100 text-gray-500 cursor-not-allowed opacity-90' : ''}`} 
+                        value={formData.kabupaten} 
+                        onChange={handleChange}
+                        disabled={!isProvinsi}
+                      >
+                        <option value="">Pilih Kabupaten</option>
+                        {KABUPATEN_NTT.map(k => <option key={k} value={k}>{k}</option>)}
+                      </select>
+                      {!isProvinsi && (
+                        <p className="mt-1.5 text-xs text-blue-600 font-semibold italic">
+                          * Terkunci pada otoritas wilayah Anda.
+                        </p>
+                      )}
+                    </div>
                     <div className="sm:col-span-2"><label className={labelClass}>ALAMAT LENGKAP *</label><input name="alamat" className={inputClass} placeholder="Nama jalan, gang, atau patokan" value={formData.alamat} onChange={handleChange} /></div>
                     <div><label className={labelClass}>KECAMATAN *</label><input name="kecamatan" className={inputClass} placeholder="Masukkan Kecamatan" value={formData.kecamatan} onChange={handleChange} /></div>
                     <div><label className={labelClass}>KELURAHAN/DESA *</label><input name="kelurahan" className={inputClass} placeholder="Masukkan Kelurahan/Desa" value={formData.kelurahan} onChange={handleChange} /></div>
