@@ -4,7 +4,6 @@ import { PageShell } from "@/components/page-shell";
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-// UBAH: Tambahkan icon Search
 import { 
   Maximize2, Loader2, ArrowRight, X, User, MapPin, 
   FileText, Home, FolderOpen, Folder, Search 
@@ -26,6 +25,7 @@ export const Route = createFileRoute("/map")({
   ssr: false, 
 });
 
+// Komponen Auto-Zoom: Akan menyesuaikan fokus peta HANYA pada titik yang diizinkan dilihat
 function MapBoundsUpdater({ rows }: { rows: RtlhData[] }) {
   const map = useMap();
   useEffect(() => {
@@ -36,6 +36,7 @@ function MapBoundsUpdater({ rows }: { rows: RtlhData[] }) {
 
     if (validCoords.length > 0) {
       const bounds = L.latLngBounds(validCoords);
+      // Peta otomatis terbang dan fokus ke kluster titik wilayah user
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14, animate: true });
     }
   }, [rows, map]);
@@ -44,7 +45,6 @@ function MapBoundsUpdater({ rows }: { rows: RtlhData[] }) {
 
 function MapPage() {
   const [kec, setKec] = useState("all");
-  // UBAH: Tambahkan state untuk pencarian nama
   const [searchName, setSearchName] = useState("");
   const [detail, setDetail] = useState<RtlhData | null>(null);
 
@@ -58,20 +58,28 @@ function MapPage() {
 
   const activeRows = Array.isArray(rows) ? rows : [];
 
+  // ==========================================
+  // KUNCI TITIK MAPS DI SINI (FILTER OTORITAS)
+  // ==========================================
   const filteredRows = useMemo(() => {
     return activeRows.filter((r) => {
       const rowKab = String(r.kabupaten || "").toLowerCase();
       
-      const matchKec = isProvinsi 
+      // 1. Kunci Filter Wilayah: 
+      // Jika Provinsi -> Bisa lihat semua ('all') atau filter per kab
+      // Jika Kabupaten -> DIPAKSA hanya mencocokkan kabupaten milik user saja
+      const matchKabupaten = isProvinsi 
         ? (kec === "all" || rowKab.includes(kec.toLowerCase()))
         : (rowKab.includes(userKab.toLowerCase()));
 
+      // 2. Filter Koordinat Valid
       const isValidCoords = r.lat !== 0 && r.lng !== 0 && !isNaN(r.lat) && !isNaN(r.lng);
       
-      // UBAH: Logika pencarian nama (real-time)
+      // 3. Filter Pencarian Nama
       const matchName = searchName === "" || String(r.nama || "").toLowerCase().includes(searchName.toLowerCase());
 
-      return matchKec && isValidCoords && matchName;
+      // Titik dirangkum hanya jika lolos ketiga penjaga keamanan di atas
+      return matchKabupaten && isValidCoords && matchName;
     });
   }, [activeRows, kec, isProvinsi, userKab, searchName]);
 
@@ -97,7 +105,7 @@ function MapPage() {
         {/* Kontrol Filter */}
         <div className="mb-6 flex flex-wrap items-center gap-4 rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm">
           
-          {/* UBAH: Input Pencarian Nama */}
+          {/* Input Pencarian Nama */}
           <div className="relative flex-grow sm:flex-grow-0 sm:min-w-[280px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
@@ -149,6 +157,7 @@ function MapPage() {
             <MapContainer center={[-10.17, 123.6]} zoom={8} style={{ height: 600, width: "100%", zIndex: 0 }}>
               <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
               
+              {/* Updater otomatis membatasi area pandang peta */}
               <MapBoundsUpdater rows={filteredRows} />
 
               {filteredRows.map((r) => {
@@ -217,7 +226,7 @@ function RenderDetailModal({ detail, setDetail }: { detail: RtlhData, setDetail:
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm overflow-y-auto" onClick={() => setDetail(null)}>
       <div onClick={(e) => e.stopPropagation()} className="w-full max-w-2xl my-auto overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-        <div className="flex items-center justify-between bg-[#072456] px-6 py-4 text-white">
+        <div className="flex items-center justify-between bg-gradient-hero bg-[#072456] px-6 py-4 text-white">
           <div>
             <div className="text-[10px] uppercase tracking-widest text-[#f5b027] font-bold">Data Masuk: {detail.timestamp ? String(detail.timestamp).split("T")[0] : "-"}</div>
             <div className="text-xl mt-0.5 font-extrabold">{detail.nama || "Tanpa Nama"}</div>
