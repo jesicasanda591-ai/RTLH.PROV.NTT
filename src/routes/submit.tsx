@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { PageShell } from "@/components/page-shell";
-// UBAH: Menambahkan AlertCircle untuk ikon Pop-up peringatan
+// Menambahkan AlertCircle untuk ikon Pop-up peringatan
 import { ClipboardCheck, ArrowRight, Save, CheckCircle, Loader2, FolderOpen, ExternalLink, AlertCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
@@ -37,7 +37,7 @@ function SubmitPage() {
   const [generatedId, setGeneratedId] = useState("");
   const [generatedFolderUrl, setGeneratedFolderUrl] = useState(""); 
   
-  // UBAH: State baru untuk mengontrol kustom pop-up peringatan
+  // State baru untuk mengontrol kustom pop-up peringatan
   const [alertModal, setAlertModal] = useState({
     show: false,
     title: "",
@@ -45,8 +45,9 @@ function SubmitPage() {
     type: "error" as "error" | "warning"
   });
   
+  // UBAH: email diganti menjadi desil
   const [formData, setFormData] = useState({
-    nama: "", nik: "", phone: "", email: "",
+    nama: "", nik: "", phone: "", desil: "",
     kabupaten: isProvinsi ? "" : userKab, alamat: "", kecamatan: "", kelurahan: "", rt: "", rw: "",
     lat: "", long: ""
   });
@@ -67,19 +68,18 @@ function SubmitPage() {
 
   const handleNextStep = (currentStep: number) => {
     if (currentStep === 1) {
-      if (!formData.nama || formData.nik.length !== 16 || !formData.phone) {
-        // UBAH: Menggunakan kustom pop-up
+      // UBAH: Tambahkan validasi wajib isi untuk desil
+      if (!formData.nama || formData.nik.length !== 16 || !formData.phone || !formData.desil) {
         setAlertModal({ 
           show: true, 
           title: "Data Belum Lengkap", 
-          message: "Mohon lengkapi Nama, NIK (harus 16 digit), dan No. Telepon!", 
+          message: "Mohon lengkapi Nama, NIK (harus 16 digit), No. Telepon, dan Desil!", 
           type: "warning" 
         });
         return;
       }
 
       if (isCheckingData) {
-        // UBAH: Menggunakan kustom pop-up
         setAlertModal({ 
           show: true, 
           title: "Sistem Sedang Memuat", 
@@ -95,7 +95,6 @@ function SubmitPage() {
       );
 
       if (isDuplicate) {
-        // UBAH: Menggunakan kustom pop-up untuk penolakan
         setAlertModal({ 
           show: true, 
           title: "PENGAJUAN DITOLAK!", 
@@ -108,7 +107,6 @@ function SubmitPage() {
       setStep(2);
     } else if (currentStep === 2) {
       if (!formData.kabupaten || !formData.alamat || !formData.kecamatan || !formData.kelurahan || !formData.rt || !formData.rw || !formData.lat || !formData.long) {
-        // UBAH: Menggunakan kustom pop-up
         setAlertModal({ 
           show: true, 
           title: "Lokasi Belum Lengkap", 
@@ -141,7 +139,6 @@ function SubmitPage() {
       }
     } catch (error: any) {
       console.error("Error submit data:", error);
-      // UBAH: Menggunakan kustom pop-up untuk error pengiriman
       setAlertModal({ 
         show: true, 
         title: "Gagal Mengirim Data", 
@@ -258,7 +255,26 @@ function SubmitPage() {
                     <div><label className={labelClass}>NAMA LENGKAP *</label><input name="nama" className={inputClass} placeholder="Masukkan nama lengkap" value={formData.nama} onChange={handleChange} /></div>
                     <div><label className={labelClass}>NIK *</label><input name="nik" className={inputClass} placeholder="Masukkan 16 digit NIK" maxLength={16} inputMode="numeric" value={formData.nik} onChange={handleChange} /></div>
                     <div><label className={labelClass}>NO. TELEPON *</label><input name="phone" className={inputClass} placeholder="Contoh: 081234567890" value={formData.phone} onChange={handleChange} /></div>
-                    <div><label className={labelClass}>EMAIL</label><input name="email" className={inputClass} placeholder="Masukkan alamat email" type="email" value={formData.email} onChange={handleChange} /></div>
+                    
+                    {/* UBAH: Mengganti Input Email menjadi Select Desil */}
+                    <div>
+                      <label className={labelClass}>DESIL *</label>
+                      <select 
+                        name="desil" 
+                        required
+                        className={inputClass} 
+                        value={formData.desil} 
+                        onChange={handleChange}
+                      >
+                        <option value="" disabled>Pilih Status Desil...</option>
+                        <option value="1">Desil 1 (Sangat Miskin)</option>
+                        <option value="2">Desil 2 (Miskin)</option>
+                        <option value="3">Desil 3 (Rentan Miskin)</option>
+                        <option value="4">Desil 4 (Hampir Miskin)</option>
+                        <option value="-">Tidak Ditemukan</option>
+                      </select>
+                    </div>
+
                   </div>
                   <div className="flex justify-end pt-4 border-t border-gray-100 mt-6">
                     <button onClick={() => handleNextStep(1)} className="bg-[#ffc107] text-[#072456] px-8 py-3 rounded-xl font-bold text-sm hover:bg-[#f5b027] transition-colors shadow-sm flex items-center gap-2">Lanjut ke Lokasi <ArrowRight size={16} /></button>
@@ -332,8 +348,10 @@ function SubmitPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5 text-sm bg-gray-50 border border-gray-100 p-6 rounded-xl">
                      <div><span className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Nama</span><span className="font-semibold text-gray-900">{formData.nama}</span></div>
                      <div><span className="block text-[10px] font-bold text-gray-500 uppercase mb-1">NIK</span><span className="font-semibold text-gray-900">{formData.nik}</span></div>
+                     {/* UBAH: Tambahkan Info Desil di Konfirmasi Akhir */}
+                     <div><span className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Desil</span><span className="font-semibold text-gray-900">{formData.desil}</span></div>
                      <div><span className="block text-[10px] font-bold text-gray-500 uppercase mb-1">No. Telepon</span><span className="font-semibold text-gray-900">{formData.phone}</span></div>
-                     <div><span className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Alamat</span><span className="font-medium text-gray-800">{formData.alamat}, RT {formData.rt}/RW {formData.rw}, {formData.kelurahan}, {formData.kecamatan}, {formData.kabupaten}</span></div>
+                     <div className="sm:col-span-2"><span className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Alamat</span><span className="font-medium text-gray-800">{formData.alamat}, RT {formData.rt}/RW {formData.rw}, {formData.kelurahan}, {formData.kecamatan}, {formData.kabupaten}</span></div>
                      <div className="sm:col-span-2"><span className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Koordinat</span><span className="font-medium text-gray-800">{formData.lat}, {formData.long}</span></div>
                      <div className="sm:col-span-2 bg-blue-50/50 border border-blue-100 p-3 rounded-lg text-center">
                         <span className="text-xs text-blue-700 italic">Folder upload dokumen akan dibuat otomatis setelah pengajuan dikirim.</span>
@@ -353,7 +371,7 @@ function SubmitPage() {
         </div>
       </div>
 
-      {/* UBAH: KUSTOM POP-UP MODAL PERINGATAN / ERROR */}
+      {/* KUSTOM POP-UP MODAL PERINGATAN / ERROR */}
       {alertModal.show && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#072456]/40 p-4 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="w-full max-w-md overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl animate-in zoom-in-95 duration-200">
