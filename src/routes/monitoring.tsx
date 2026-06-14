@@ -5,10 +5,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getBnbaData, updateBnbaStatus, updateBnbaProgress, RtlhData } from "@/lib/api";
 import { 
   Search, CheckCircle2, User, MapPin, 
-  Loader2, FolderOpen, AlertCircle, X 
+  Loader2, FolderOpen, AlertCircle, X, UploadCloud, FileCheck
 } from "lucide-react";
 
-// --- Constants ---
+// URL Web App Apps Script kamu
+const BASE_URL = "https://script.google.com/macros/s/AKfycbxrmD2cSnEdEpToTJDJokCo4if12CLGkMiaGDZktzvJzqmkB_TrGJ1oUfK1QuXZe5bF/exec";
+
 const KABUPATEN_LIST = [
   "Kabupaten Alor", "Kabupaten Belu", "Kabupaten Ende", "Kabupaten Flores Timur",
   "Kabupaten Kupang", "Kabupaten Lembata", "Kabupaten Malaka", "Kabupaten Manggarai",
@@ -37,12 +39,10 @@ const STATUS_TO_STEP: Record<string, number> = {
   "Selesai": 6,
 };
 
-// --- Route Definition ---
 export const Route = createFileRoute("/monitoring")({
   head: () => ({ meta: [{ title: "Monitoring & Kontrol RTLH · SIM-RTLH" }] }),
   beforeLoad: () => {
     if (typeof window !== "undefined") {
-      // UBAH 1: Cek kedua brankas untuk token login
       const isAuthenticated = sessionStorage.getItem("auth_token") || localStorage.getItem("auth_token");
       if (!isAuthenticated) throw redirect({ to: "/login" });
     }
@@ -50,23 +50,25 @@ export const Route = createFileRoute("/monitoring")({
   component: MonitoringPage,
 });
 
-// --- Main Page Component ---
 export function MonitoringPage() {
   const queryClient = useQueryClient();
   
-  // State untuk Toast Notification
   const [showToast, setShowToast] = useState(false);
+  const [toastConfig, setToastConfig] = useState({ title: "Berhasil!", msg: "" });
   
-  // UBAH 2: Cek kedua brankas untuk mengambil nama kabupaten agar filter dan izin admin tidak rusak
   const userKab = typeof window !== "undefined" ? (sessionStorage.getItem("user_kabupaten") || localStorage.getItem("user_kabupaten") || "") : "";
   const isProvinsi = userKab.toLowerCase() === "provinsi" || userKab.toLowerCase() === "admin";
   
   const [selectedKabupaten, setSelectedKabupaten] = useState<string>(isProvinsi ? "Kota Kupang" : userKab);
   const [searchQuery, setSearchQuery] = useState<string>(""); 
   const [selectedId, setSelectedId] = useState<string>("");
+  
   const [statusSelect, setStatusSelect] = useState<string>("");
   const [kerusakanSelect, setKerusakanSelect] = useState<string>("Rusak Ringan");
+  
   const [selectedProgressValue, setSelectedProgressValue] = useState<number>(25);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadLoading, setUploadLoading] = useState(false);
 
   const { data: serverBnbaData = [], isLoading: isBnbaLoading } = useQuery<RtlhData[]>({
     queryKey: ["bnbaData"],
@@ -76,18 +78,68 @@ export function MonitoringPage() {
   const mutation = useMutation({
     mutationFn: ({ id, status, kerusakan }: { id: string; status: string; kerusakan: string }) => 
       updateBnbaStatus(id, status, kerusakan),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["bnbaData"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bnbaData"] });
+      setToastConfig({ title: "Status Diperbarui!", msg: "Status pengajuan berhasil diubah." });
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    },
   });
 
   const progressMutation = useMutation({
     mutationFn: ({ id, progress }: { id: string, progress: number }) => updateBnbaProgress(id, progress),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bnbaData"] });
-      // Tampilkan toast dan hilangkan setelah 3 detik
+      setToastConfig({ title: "Progres Diupdate!", msg: "Progres fisik telah tersimpan ke spreadsheet." });
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
     },
   });
+
+  const handleFileUpload = async () => {
+    if (!selectedFile || !activePenerima) return;
+    setUploadLoading(true);
+
+    try {
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve) => {
+        reader.onload = () => {
+          const base64 = (reader.result as string).split(",")[1];
+          resolve(base64);
+        };
+        reader.readAsDataURL(selectedFile);
+      });
+
+      const base64Data = await base64Promise;
+
+      const response = await fetch(BASE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({
+          action: "uploadFile",
+          id: activePenerima.id,
+          fileName: selectedFile.name,
+          mimeType: selectedFile.type,
+          fileData: base64Data
+        }),
+      });
+
+      const res = await response.json();
+      if (res.status === "success") {
+        setToastConfig({ title: "Upload Sukses!", msg: "Dokumen administrasi berhasil disimpan di Drive Utama warga." });
+        setShowToast(true);
+        setSelectedFile(null);
+        setTimeout(() => setShowToast(false), 3000);
+      } else {
+        alert("Gagal: " + res.message);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Terjadi kesalahan saat mengunggah file.");
+    } finally {
+      setUploadLoading(false);
+    }
+  };
 
   const filteredData = useMemo(() => {
     return serverBnbaData.filter((item) => {
@@ -106,10 +158,13 @@ export function MonitoringPage() {
     if (activePenerima) {
       setStatusSelect(activePenerima.status);
       setKerusakanSelect(activePenerima.kerusakan || "Rusak Ringan");
+      setSelectedFile(null);
     }
   }, [activePenerima]);
 
   const handleSaveStatus = () => { if (activePenerima) mutation.mutate({ id: activePenerima.id, status: statusSelect, kerusakan: kerusakanSelect }); };
+  
+  // Fungsi yang sebelumnya tidak sengaja terhapus:
   const handleUpdateProgress = () => { if (activePenerima) progressMutation.mutate({ id: activePenerima.id, progress: selectedProgressValue }); };
 
   return (
@@ -120,8 +175,8 @@ export function MonitoringPage() {
            <div className="bg-white border border-green-200 shadow-xl rounded-lg p-4 flex items-center gap-3 border-l-4 border-l-green-500">
               <CheckCircle2 className="text-green-500 h-6 w-6" />
               <div>
-                <h4 className="text-sm font-bold text-slate-800">Berhasil!</h4>
-                <p className="text-xs text-slate-500">Progres telah diupdate ke spreadsheet.</p>
+                <h4 className="text-sm font-bold text-slate-800">{toastConfig.title}</h4>
+                <p className="text-xs text-slate-500">{toastConfig.msg}</p>
               </div>
               <button onClick={() => setShowToast(false)} className="ml-4 text-slate-400 hover:text-slate-600"><X size={16}/></button>
            </div>
@@ -196,59 +251,174 @@ export function MonitoringPage() {
                 <div className="md:col-span-5 bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
                   <h3 className="text-sm font-bold text-slate-800 border-b border-slate-50 pb-2">Ubah Status</h3>
                   <div className="space-y-3">
-                    <div className="space-y-1.5"><label className="text-xs font-medium text-slate-500">Status Baru</label><select value={statusSelect} onChange={(e) => setStatusSelect(e.target.value)} className="w-full rounded-lg border border-slate-200 p-2 text-xs">{Object.keys(STATUS_TO_STEP).map(status => <option key={status} value={status}>{status}</option>)}</select></div>
-                    {!["Validasi", "Penetapan", "Selesai"].includes(statusSelect) && (<div className="space-y-1.5"><label className="text-xs font-medium text-slate-500">Tingkat Kerusakan</label><select value={kerusakanSelect} onChange={(e) => setKerusakanSelect(e.target.value)} className="w-full rounded-lg border border-slate-200 p-2 text-xs"><option value="Rusak Ringan">Rusak Ringan</option><option value="Rusak Sedang">Rusak Sedang</option><option value="Rusak Berat">Rusak Berat</option></select></div>)}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-slate-500">Status Baru</label>
+                      <select value={statusSelect} onChange={(e) => setStatusSelect(e.target.value)} className="w-full rounded-lg border border-slate-200 p-2 text-xs">
+                        {Object.keys(STATUS_TO_STEP).map(status => <option key={status} value={status}>{status}</option>)}
+                      </select>
+                    </div>
+                    
+                    {/* FITUR AKSES FOLDER UTAMA: AKTIF HANYA JIKA STATUS == VALIDASI */}
+                    {statusSelect === "Validasi" && (
+                      <div className="space-y-3 border border-blue-100 bg-blue-50/40 rounded-xl p-4 text-center animate-in fade-in slide-in-from-top-2 duration-300">
+                        <label className="block text-xs font-bold text-blue-950 uppercase tracking-wide mb-1 text-left">
+                          Dokumen Administrasi (Folder Utama)
+                        </label>
+                        
+                        {/* Tombol Akses Folder Utama */}
+                        {activePenerima.linkDrive && String(activePenerima.linkDrive).trim() !== "-" && (
+                          <a 
+                            href={activePenerima.linkDrive} 
+                            target="_blank" 
+                            rel="noreferrer" 
+                            className="flex items-center justify-center py-2.5 rounded-lg border bg-[#eef2ff] border-blue-200 text-blue-700 hover:bg-blue-100 cursor-pointer shadow-sm text-xs font-bold w-full transition-colors"
+                          >
+                            <FolderOpen size={14} className="mr-1.5" /> Buka Folder Utama di Drive
+                          </a>
+                        )}
+
+                        {/* Dropzone Upload Berkas HANYA PDF */}
+                        <div className="relative cursor-pointer bg-white rounded-lg border border-slate-200 p-4 hover:bg-slate-50 transition-all flex flex-col items-center justify-center gap-1 mt-2">
+                          <input 
+                            type="file" 
+                            accept=".pdf" // Membatasi agar hanya bisa pilih file PDF
+                            className="absolute inset-0 opacity-0 cursor-pointer" 
+                            onChange={(e) => {
+                              if (e.target.files?.[0]) setSelectedFile(e.target.files[0]);
+                            }}
+                          />
+                          {selectedFile ? (
+                            <>
+                              <FileCheck className="h-7 w-7 text-green-600 animate-bounce" />
+                              <span className="text-xs font-semibold text-slate-700 max-w-[180px] truncate">{selectedFile.name}</span>
+                            </>
+                          ) : (
+                            <>
+                              <UploadCloud className="h-7 w-7 text-blue-500" />
+                              <span className="text-xs font-medium text-slate-600">Pilih Berkas Upload</span>
+                              <span className="text-[10px] text-slate-400 font-bold text-red-500">Wajib 1 File PDF (Maks 10MB)</span>
+                            </>
+                          )}
+                        </div>
+
+                        {selectedFile && (
+                          <button 
+                            onClick={handleFileUpload} 
+                            disabled={uploadLoading}
+                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-lg text-xs transition-colors shadow-sm flex items-center justify-center gap-1 mt-2"
+                          >
+                            {uploadLoading ? <><Loader2 className="animate-spin h-3.5 w-3.5" />Mengunggah...</> : "Mulai Upload ke Drive"}
+                          </button>
+                        )}
+
+                        {/* CATATAN PERSYARATAN DOKUMEN VALIDASI */}
+                        <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3.5 text-left">
+                           <h4 className="text-xs font-bold text-amber-900 mb-2 flex items-center gap-1.5">
+                             <AlertCircle className="h-4 w-4" /> Syarat Dokumen Validasi
+                           </h4>
+                           <p className="text-[10px] text-amber-800 mb-2 leading-relaxed">
+                             Seluruh dokumen wajib digabungkan dan diunggah dalam <strong>1 (satu) file PDF</strong> dengan urutan:
+                           </p>
+                           <ol className="list-decimal pl-4 pr-1 text-[10px] text-amber-800 space-y-1.5 mb-3 text-justify">
+                             <li>Surat Pernyataan Bupati/Wali Kota tentang kebenaran informasi dan validitas data usulan;</li>
+                             <li>Foto kondisi rumah (tampak depan, samping, struktural, & non-struktural);</li>
+                             <li>Fotokopi KTP & KK atau Surat Keterangan Domisili;</li>
+                             <li>Fotokopi sertifikat hak atas tanah / surat keterangan kepemilikan sah;</li>
+                             <li>Surat Pernyataan bermeterai belum pernah menerima bantuan serupa (10 thn terakhir);</li>
+                             <li>Surat Pernyataan Kesanggupan Berswadaya (bagi yang mampu);</li>
+                             <li>Surat Pernyataan Bebas Kredit dari PB;</li>
+                             <li>Titik koordinat lokasi rumah;</li>
+                             <li>Surat Keterangan Overlay Guna Lahan dari Dinas PRKP/PUPR;</li>
+                             <li>Daftar Usulan Peningkatan Kualitas Rumah yang diisi lengkap.</li>
+                           </ol>
+                           <p className="text-[10px] text-amber-900 font-semibold leading-relaxed text-justify bg-amber-100/50 p-2 rounded">
+                             Pastikan seluruh dokumen terbaca dengan jelas. Berkas yang tidak lengkap/sesuai dapat menyebabkan usulan tidak dapat diproses lebih lanjut.
+                           </p>
+                        </div>
+
+                      </div>
+                    )}
+
+                    {!["Validasi", "Penetapan", "Selesai"].includes(statusSelect) && (
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-slate-500">Tingkat Kerusakan</label>
+                        <select value={kerusakanSelect} onChange={(e) => setKerusakanSelect(e.target.value)} className="w-full rounded-lg border border-slate-200 p-2 text-xs">
+                          <option value="Rusak Ringan">Rusak Ringan</option>
+                          <option value="Rusak Sedang">Rusak Sedang</option>
+                          <option value="Rusak Berat">Rusak Berat</option>
+                        </select>
+                      </div>
+                    )}
                   </div>
-                  <button onClick={handleSaveStatus} disabled={mutation.isPending} className="w-full bg-blue-600 text-white p-2 rounded-lg text-xs font-bold hover:bg-blue-700 mt-4">{mutation.isPending ? "Menyimpan..." : "Simpan Status"}</button>
+                  <button onClick={handleSaveStatus} disabled={mutation.isPending} className="w-full bg-blue-600 text-white p-2 rounded-lg text-xs font-bold hover:bg-blue-700 mt-4 transition-colors">
+                    {mutation.isPending ? <><Loader2 className="animate-spin inline-block mr-2 h-4 w-4" />Menyimpan...</> : "Simpan Status"}
+                  </button>
                 </div>
               </div>
 
+              {/* FOLDER PROGRES KEMBALI KE PENGATURAN AWAL (HANYA MUNCUL DI TAHAP SELESAI) */}
               {activePenerima.status === "Selesai" && (
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 animate-in fade-in duration-300">
-                  <h3 className="mb-4 flex items-center gap-2 text-xs font-bold uppercase text-slate-800 border-b pb-2">
-                      <FolderOpen size={16} className="text-blue-600" /> Folder Progres
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-8 animate-in fade-in duration-300">
+                  <h3 className="mb-5 flex items-center gap-2 text-xs font-bold uppercase text-slate-800 border-b border-slate-100 pb-3">
+                      <FolderOpen size={16} className="text-blue-600" /> Folder Progres Pelaksanaan
                   </h3>
                   
-                  <div className="grid grid-cols-4 gap-2 mb-6">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
                       {[25, 50, 75, 100].map((num) => {
                           const key = `progres${num}` as keyof RtlhData;
                           const link = activePenerima[key];
                           const isAvailable = Boolean(link && String(link).trim() !== "" && String(link).trim() !== "-");
                           return (
-                              <a key={num} href={isAvailable ? String(link) : "#"} target="_blank" rel="noreferrer" className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-all ${isAvailable ? "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 cursor-pointer" : "bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed"}`}>
-                                  <span className="text-xs font-bold">{num}%</span>
+                              <a 
+                                  key={num} 
+                                  href={isAvailable ? String(link) : "#"} 
+                                  target="_blank" 
+                                  rel="noreferrer" 
+                                  className={`flex flex-col items-center justify-center py-2.5 rounded-lg border transition-all ${isAvailable ? "bg-[#eef2ff] border-blue-200 text-blue-700 hover:bg-blue-100 cursor-pointer shadow-sm" : "bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed"}`}
+                              >
+                                  <span className="text-sm font-bold">{num}%</span>
                               </a>
                           );
                       })}
                   </div>
 
-                  {/* Kotak Peringatan */}
-                  <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <div className="mb-5 p-3.5 bg-[#fffbeb] border border-[#fde68a] rounded-xl">
                       <div className="flex items-start gap-2 text-amber-800">
                           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
                           <div>
                               <p className="text-xs font-bold uppercase mb-1">Penting: Persiapan Dokumen</p>
                               <p className="text-[11px] leading-relaxed">
-                                  Sebelum menekan tombol <strong>Update</strong>, pastikan file foto progres pekerjaan (tampak depan/samping/belakang/dalam) telah diunggah atau tersedia di sistem untuk tahap progres yang dipilih.
+                                  Sebelum menekan tombol <strong className="text-amber-900">Update</strong>, pastikan file foto progres pekerjaan (tampak depan/samping/belakang/dalam) telah diunggah atau tersedia di sistem untuk tahap progres yang dipilih.
                               </p>
                           </div>
                       </div>
                   </div>
 
                   <div className="flex gap-3">
-                      <select value={selectedProgressValue} onChange={(e) => setSelectedProgressValue(Number(e.target.value))} className="flex-1 rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-blue-500">
+                      <select 
+                        value={selectedProgressValue} 
+                        onChange={(e) => setSelectedProgressValue(Number(e.target.value))} 
+                        className="flex-1 rounded-xl border border-blue-200 bg-white p-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                      >
                           <option value={25}>Tahap 25%</option>
                           <option value={50}>Tahap 50%</option>
                           <option value={75}>Tahap 75%</option>
                           <option value={100}>Tahap 100%</option>
                       </select>
-                      <button onClick={handleUpdateProgress} disabled={progressMutation.isPending} className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition-all shadow-sm">Update</button>
+                      <button 
+                        onClick={handleUpdateProgress} 
+                        disabled={progressMutation.isPending} 
+                        className="px-8 py-3 bg-[#1a56db] text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-all shadow-sm active:scale-[0.98]"
+                      >
+                        {progressMutation.isPending ? <Loader2 className="animate-spin h-4 w-4 mx-auto" /> : "Update"}
+                      </button>
                   </div>
                 </div>
               )}
+
             </div>
           ) : (
-            <div className="lg:col-span-8 xl:col-span-9 bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-400 text-xs">Pilih penerima...</div>
+            <div className="lg:col-span-8 xl:col-span-9 bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-400 text-xs">Pilih penerima di panel kiri untuk melihat detail...</div>
           )}
         </div>
       </div>
