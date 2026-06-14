@@ -163,8 +163,6 @@ export function MonitoringPage() {
   }, [activePenerima]);
 
   const handleSaveStatus = () => { if (activePenerima) mutation.mutate({ id: activePenerima.id, status: statusSelect, kerusakan: kerusakanSelect }); };
-  
-  // Fungsi yang sebelumnya tidak sengaja terhapus:
   const handleUpdateProgress = () => { if (activePenerima) progressMutation.mutate({ id: activePenerima.id, progress: selectedProgressValue }); };
 
   return (
@@ -339,14 +337,29 @@ export function MonitoringPage() {
                       </div>
                     )}
 
-                    {!["Validasi", "Penetapan", "Selesai"].includes(statusSelect) && (
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-slate-500">Tingkat Kerusakan</label>
-                        <select value={kerusakanSelect} onChange={(e) => setKerusakanSelect(e.target.value)} className="w-full rounded-lg border border-slate-200 p-2 text-xs">
-                          <option value="Rusak Ringan">Rusak Ringan</option>
-                          <option value="Rusak Sedang">Rusak Sedang</option>
-                          <option value="Rusak Berat">Rusak Berat</option>
-                        </select>
+                    {/* UBAH: TINGKAT KERUSAKAN HANYA MUNCUL DI LUAR PENGAJUAN, VALIDASI, PENETAPAN, SELESAI */}
+                    {!["Pengajuan", "Validasi", "Penetapan", "Selesai"].includes(statusSelect) && (
+                      <div className="space-y-2 animate-in fade-in duration-300 mt-2">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-medium text-slate-500">Tingkat Kerusakan</label>
+                          <select value={kerusakanSelect} onChange={(e) => setKerusakanSelect(e.target.value)} className="w-full rounded-lg border border-slate-200 p-2 text-xs">
+                            <option value="Rusak Ringan">Rusak Ringan</option>
+                            <option value="Rusak Sedang">Rusak Sedang</option>
+                            <option value="Rusak Berat">Rusak Berat</option>
+                          </select>
+                        </div>
+                        
+                        {/* NOTE TINGKAT KERUSAKAN KHUSUS UNTUK VERIFIKASI */}
+                        {statusSelect === "Verifikasi" && (
+                          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-1 text-left">
+                            <div className="flex items-start gap-1.5 text-amber-800">
+                                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                                <p className="text-[10px] leading-relaxed text-justify">
+                                  <strong>Pilih tingkat kerusakan rumah</strong> sesuai dengan kondisi yang terlihat pada foto rumah yang diunggah. Pastikan tingkat kerusakan yang dipilih (Ringan, Sedang, atau Berat) sesuai dengan kondisi fisik bangunan yang tampak pada foto. Ketidaksesuaian antara foto dan tingkat kerusakan yang dipilih dapat memengaruhi hasil verifikasi dan penilaian usulan bantuan.
+                                </p>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
