@@ -112,12 +112,20 @@ export async function getBnbaData(): Promise<RtlhData[]> {
 
 export const getRtlhRows = getBnbaData;
 
-export async function updateBnbaStatus(id: string, status: string, kerusakan?: string): Promise<any> {
+// --- FUNGSI DIPERBARUI: Tambah parameter `koordinat` ---
+export async function updateBnbaStatus(id: string, status: string, kerusakan?: string, koordinat?: string): Promise<any> {
   try {
+    const payload: any = { action: "updateStatus", id, status, kerusakan };
+    
+    // Masukkan koordinat ke payload jika ada nilainya
+    if (koordinat) {
+      payload.koordinat = koordinat;
+    }
+
     const response = await fetch(BASE_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "updateStatus", id, status, kerusakan }),
+      body: JSON.stringify(payload),
     });
     const textData = await response.text();
     return JSON.parse(textData);

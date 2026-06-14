@@ -65,7 +65,9 @@ export function MonitoringPage() {
   
   const [statusSelect, setStatusSelect] = useState<string>("");
   const [kerusakanSelect, setKerusakanSelect] = useState<string>("Rusak Ringan");
-  const [koordinatBaru, setKoordinatBaru] = useState<string>(""); 
+  
+  const [latBaru, setLatBaru] = useState<string>(""); 
+  const [longBaru, setLongBaru] = useState<string>(""); 
   
   const [selectedProgressValue, setSelectedProgressValue] = useState<number>(25);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -159,18 +161,28 @@ export function MonitoringPage() {
     if (activePenerima) {
       setStatusSelect(activePenerima.status);
       setKerusakanSelect(activePenerima.kerusakan || "Rusak Ringan");
-      setKoordinatBaru(activePenerima.koordinat || ""); 
       setSelectedFile(null);
+      
+      if (activePenerima.koordinat) {
+        const parts = activePenerima.koordinat.split(",");
+        setLatBaru(parts[0]?.trim() || "");
+        setLongBaru(parts[1]?.trim() || "");
+      } else {
+        setLatBaru("");
+        setLongBaru("");
+      }
     }
   }, [activePenerima]);
 
   const handleSaveStatus = () => { 
     if (activePenerima) {
+      const combinedKoordinat = (latBaru || longBaru) ? `${latBaru}, ${longBaru}` : "";
+      
       mutation.mutate({ 
         id: activePenerima.id, 
         status: statusSelect, 
         kerusakan: kerusakanSelect,
-        koordinat: statusSelect === "Survei" ? koordinatBaru : undefined 
+        koordinat: statusSelect === "Survei" ? combinedKoordinat : undefined 
       }); 
     }
   };
@@ -291,30 +303,46 @@ export function MonitoringPage() {
                       </div>
                     )}
                     
-                    {/* KHUSUS SURVEI */}
+                    {/* KHUSUS SURVEI (KOORDINAT TERPISAH + NOTE TINGKAT KERUSAKAN) */}
                     {statusSelect === "Survei" && (
                       <div className="space-y-4 animate-in fade-in duration-300 mt-4 border-t border-slate-100 pt-4">
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                            <MapPin className="h-3.5 w-3.5 text-blue-600" /> Koordinat Lokasi Rumah
-                          </label>
-                          <input 
-                            type="text" 
-                            value={koordinatBaru}
-                            onChange={(e) => setKoordinatBaru(e.target.value)}
-                            placeholder="Contoh: -10.123456, 123.654321"
-                            className="w-full rounded-lg border border-slate-200 p-2 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
-                          />
-                          <p className="text-[10px] text-slate-400 italic">Dapat disesuaikan jika titik koordinat hasil survei berbeda dengan data awal.</p>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          {/* Latitude */}
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-[#072456] uppercase">Latitude *</label>
+                            <input 
+                              type="text" 
+                              value={latBaru}
+                              onChange={(e) => setLatBaru(e.target.value)}
+                              placeholder="-10.xxxxxx"
+                              className="w-full rounded-lg border border-slate-200 p-2.5 text-xs focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
+                            />
+                          </div>
+                          
+                          {/* Longitude */}
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-[#072456] uppercase">Longitude *</label>
+                            <input 
+                              type="text" 
+                              value={longBaru}
+                              onChange={(e) => setLongBaru(e.target.value)}
+                              placeholder="123.xxxxxx"
+                              className="w-full rounded-lg border border-slate-200 p-2.5 text-xs focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
+                            />
+                          </div>
                         </div>
+                        <p className="text-[10px] text-slate-400 italic -mt-2">Dapat disesuaikan jika titik koordinat hasil survei berbeda dengan data awal.</p>
 
                         <div className="space-y-1.5">
-                          <label className="text-xs font-bold text-slate-700">Tingkat Kerusakan</label>
-                          <select value={kerusakanSelect} onChange={(e) => setKerusakanSelect(e.target.value)} className="w-full rounded-lg border border-slate-200 p-2 text-xs focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                          <label className="text-xs font-bold text-[#072456] uppercase">Tingkat Kerusakan</label>
+                          <select value={kerusakanSelect} onChange={(e) => setKerusakanSelect(e.target.value)} className="w-full rounded-lg border border-slate-200 p-2 text-xs focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors">
                             <option value="Rusak Ringan">Rusak Ringan</option>
                             <option value="Rusak Sedang">Rusak Sedang</option>
                             <option value="Rusak Berat">Rusak Berat</option>
                           </select>
+                          {/* UBAH: Tambahan Note sesuai permintaan */}
+                          <p className="text-[10px] text-slate-400 italic mt-1">Dapat disesuaikan jika tingkat kerusakan dari hasil survei berbeda dengan data awal.</p>
                         </div>
                       </div>
                     )}
