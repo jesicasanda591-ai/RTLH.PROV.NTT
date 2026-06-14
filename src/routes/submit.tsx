@@ -276,7 +276,7 @@ function SubmitPage() {
                         <option value="-">Tidak Ditemukan</option>
                       </select>
                       <p className="mt-1.5 text-[11px] text-gray-500 italic leading-snug">
-                        * Jika belum tahu status desil, silakan cek NIK di{" "}
+                        * Apabila status desil belum diketahui, silakan periksa menggunakan NIK melalui situs Cek Bansos Kemensos.{" "}
                         <a 
                           href="https://cekbansos.kemensos.go.id/" 
                           target="_blank" 
