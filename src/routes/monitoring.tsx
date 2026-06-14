@@ -65,6 +65,7 @@ export function MonitoringPage() {
   
   const [statusSelect, setStatusSelect] = useState<string>("");
   const [kerusakanSelect, setKerusakanSelect] = useState<string>("Rusak Ringan");
+  const [koordinatBaru, setKoordinatBaru] = useState<string>(""); 
   
   const [selectedProgressValue, setSelectedProgressValue] = useState<number>(25);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -76,11 +77,11 @@ export function MonitoringPage() {
   });
 
   const mutation = useMutation({
-    mutationFn: ({ id, status, kerusakan }: { id: string; status: string; kerusakan: string }) => 
-      updateBnbaStatus(id, status, kerusakan),
+    mutationFn: ({ id, status, kerusakan, koordinat }: { id: string; status: string; kerusakan: string; koordinat?: string }) => 
+      updateBnbaStatus(id, status, kerusakan, koordinat),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bnbaData"] });
-      setToastConfig({ title: "Status Diperbarui!", msg: "Status pengajuan berhasil diubah." });
+      setToastConfig({ title: "Status Diperbarui!", msg: "Perubahan data dan status berhasil disimpan." });
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
     },
@@ -158,11 +159,22 @@ export function MonitoringPage() {
     if (activePenerima) {
       setStatusSelect(activePenerima.status);
       setKerusakanSelect(activePenerima.kerusakan || "Rusak Ringan");
+      setKoordinatBaru(activePenerima.koordinat || ""); 
       setSelectedFile(null);
     }
   }, [activePenerima]);
 
-  const handleSaveStatus = () => { if (activePenerima) mutation.mutate({ id: activePenerima.id, status: statusSelect, kerusakan: kerusakanSelect }); };
+  const handleSaveStatus = () => { 
+    if (activePenerima) {
+      mutation.mutate({ 
+        id: activePenerima.id, 
+        status: statusSelect, 
+        kerusakan: kerusakanSelect,
+        koordinat: statusSelect === "Survei" ? koordinatBaru : undefined 
+      }); 
+    }
+  };
+
   const handleUpdateProgress = () => { if (activePenerima) progressMutation.mutate({ id: activePenerima.id, progress: selectedProgressValue }); };
 
   return (
@@ -255,15 +267,65 @@ export function MonitoringPage() {
                         {Object.keys(STATUS_TO_STEP).map(status => <option key={status} value={status}>{status}</option>)}
                       </select>
                     </div>
+
+                    {/* KHUSUS VERIFIKASI */}
+                    {statusSelect === "Verifikasi" && (
+                      <div className="space-y-2 animate-in fade-in duration-300 mt-4 border-t border-slate-100 pt-4">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-slate-700">Tingkat Kerusakan</label>
+                          <select value={kerusakanSelect} onChange={(e) => setKerusakanSelect(e.target.value)} className="w-full rounded-lg border border-slate-200 p-2 text-xs">
+                            <option value="Rusak Ringan">Rusak Ringan</option>
+                            <option value="Rusak Sedang">Rusak Sedang</option>
+                            <option value="Rusak Berat">Rusak Berat</option>
+                          </select>
+                        </div>
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-1 text-left">
+                          <div className="flex items-start gap-1.5 text-amber-800">
+                              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                              <p className="text-[10px] leading-relaxed text-justify">
+                                <strong>Pilih tingkat kerusakan rumah sesuai dengan kondisi yang terlihat pada foto rumah yang diunggah.</strong><br/>
+                                Pastikan tingkat kerusakan yang dipilih (Ringan, Sedang, atau Berat) sesuai dengan kondisi fisik bangunan yang tampak pada foto. Ketidaksesuaian antara foto dan tingkat kerusakan yang dipilih dapat memengaruhi hasil verifikasi dan penilaian usulan bantuan.
+                              </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     
-                    {/* FITUR AKSES FOLDER UTAMA: AKTIF HANYA JIKA STATUS == VALIDASI */}
+                    {/* KHUSUS SURVEI */}
+                    {statusSelect === "Survei" && (
+                      <div className="space-y-4 animate-in fade-in duration-300 mt-4 border-t border-slate-100 pt-4">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                            <MapPin className="h-3.5 w-3.5 text-blue-600" /> Koordinat Lokasi Rumah
+                          </label>
+                          <input 
+                            type="text" 
+                            value={koordinatBaru}
+                            onChange={(e) => setKoordinatBaru(e.target.value)}
+                            placeholder="Contoh: -10.123456, 123.654321"
+                            className="w-full rounded-lg border border-slate-200 p-2 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                          />
+                          <p className="text-[10px] text-slate-400 italic">Dapat disesuaikan jika titik koordinat hasil survei berbeda dengan data awal.</p>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-slate-700">Tingkat Kerusakan</label>
+                          <select value={kerusakanSelect} onChange={(e) => setKerusakanSelect(e.target.value)} className="w-full rounded-lg border border-slate-200 p-2 text-xs focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                            <option value="Rusak Ringan">Rusak Ringan</option>
+                            <option value="Rusak Sedang">Rusak Sedang</option>
+                            <option value="Rusak Berat">Rusak Berat</option>
+                          </select>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* KHUSUS VALIDASI (UPLOAD FILE) */}
                     {statusSelect === "Validasi" && (
-                      <div className="space-y-3 border border-blue-100 bg-blue-50/40 rounded-xl p-4 text-center animate-in fade-in slide-in-from-top-2 duration-300">
+                      <div className="space-y-3 border border-blue-100 bg-blue-50/40 rounded-xl p-4 text-center animate-in fade-in slide-in-from-top-2 duration-300 mt-4">
                         <label className="block text-xs font-bold text-blue-950 uppercase tracking-wide mb-1 text-left">
                           Dokumen Administrasi (Folder Utama)
                         </label>
                         
-                        {/* Tombol Akses Folder Utama */}
                         {activePenerima.linkDrive && String(activePenerima.linkDrive).trim() !== "-" && (
                           <a 
                             href={activePenerima.linkDrive} 
@@ -275,11 +337,10 @@ export function MonitoringPage() {
                           </a>
                         )}
 
-                        {/* Dropzone Upload Berkas HANYA PDF */}
                         <div className="relative cursor-pointer bg-white rounded-lg border border-slate-200 p-4 hover:bg-slate-50 transition-all flex flex-col items-center justify-center gap-1 mt-2">
                           <input 
                             type="file" 
-                            accept=".pdf" // Membatasi agar hanya bisa pilih file PDF
+                            accept=".pdf" 
                             className="absolute inset-0 opacity-0 cursor-pointer" 
                             onChange={(e) => {
                               if (e.target.files?.[0]) setSelectedFile(e.target.files[0]);
@@ -309,7 +370,6 @@ export function MonitoringPage() {
                           </button>
                         )}
 
-                        {/* CATATAN PERSYARATAN DOKUMEN VALIDASI */}
                         <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3.5 text-left">
                            <h4 className="text-xs font-bold text-amber-900 mb-2 flex items-center gap-1.5">
                              <AlertCircle className="h-4 w-4" /> Syarat Dokumen Validasi
@@ -333,43 +393,17 @@ export function MonitoringPage() {
                              Pastikan seluruh dokumen terbaca dengan jelas. Berkas yang tidak lengkap/sesuai dapat menyebabkan usulan tidak dapat diproses lebih lanjut.
                            </p>
                         </div>
-
                       </div>
                     )}
 
-                    {/* UBAH: TINGKAT KERUSAKAN HANYA MUNCUL DI LUAR PENGAJUAN, VALIDASI, PENETAPAN, SELESAI */}
-                    {!["Pengajuan", "Validasi", "Penetapan", "Selesai"].includes(statusSelect) && (
-                      <div className="space-y-2 animate-in fade-in duration-300 mt-2">
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-medium text-slate-500">Tingkat Kerusakan</label>
-                          <select value={kerusakanSelect} onChange={(e) => setKerusakanSelect(e.target.value)} className="w-full rounded-lg border border-slate-200 p-2 text-xs">
-                            <option value="Rusak Ringan">Rusak Ringan</option>
-                            <option value="Rusak Sedang">Rusak Sedang</option>
-                            <option value="Rusak Berat">Rusak Berat</option>
-                          </select>
-                        </div>
-                        
-                        {/* NOTE TINGKAT KERUSAKAN KHUSUS UNTUK VERIFIKASI */}
-                        {statusSelect === "Verifikasi" && (
-                          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-1 text-left">
-                            <div className="flex items-start gap-1.5 text-amber-800">
-                                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                                <p className="text-[10px] leading-relaxed text-justify">
-                                  <strong>Pilih tingkat kerusakan rumah</strong> sesuai dengan kondisi yang terlihat pada foto rumah yang diunggah. Pastikan tingkat kerusakan yang dipilih (Ringan, Sedang, atau Berat) sesuai dengan kondisi fisik bangunan yang tampak pada foto. Ketidaksesuaian antara foto dan tingkat kerusakan yang dipilih dapat memengaruhi hasil verifikasi dan penilaian usulan bantuan.
-                                </p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </div>
-                  <button onClick={handleSaveStatus} disabled={mutation.isPending} className="w-full bg-blue-600 text-white p-2 rounded-lg text-xs font-bold hover:bg-blue-700 mt-4 transition-colors">
+                  <button onClick={handleSaveStatus} disabled={mutation.isPending} className="w-full bg-blue-600 text-white p-2 rounded-lg text-xs font-bold hover:bg-blue-700 mt-4 transition-colors shadow-sm">
                     {mutation.isPending ? <><Loader2 className="animate-spin inline-block mr-2 h-4 w-4" />Menyimpan...</> : "Simpan Status"}
                   </button>
                 </div>
               </div>
 
-              {/* FOLDER PROGRES KEMBALI KE PENGATURAN AWAL (HANYA MUNCUL DI TAHAP SELESAI) */}
+              {/* FOLDER PROGRES PELAKSANAAN (HANYA MUNCUL DI TAHAP SELESAI) */}
               {activePenerima.status === "Selesai" && (
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-8 animate-in fade-in duration-300">
                   <h3 className="mb-5 flex items-center gap-2 text-xs font-bold uppercase text-slate-800 border-b border-slate-100 pb-3">
