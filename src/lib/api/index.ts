@@ -8,6 +8,7 @@ export interface RtlhData {
   timestamp: string;
   nik: string;
   nama: string;
+  desil: string; // <-- KOLOM BARU DITAMBAHKAN
   telepon: string;
   email: string;
   kabupaten: string;
@@ -60,7 +61,7 @@ export interface ActivityData {
 }
 
 // URL Web App Apps Script
-const BASE_URL = "https://script.google.com/macros/s/AKfycbxaldNza2t-OdfxuNqlJ_2T-bw5EtlFymks1EoxBlVV6fp6MHHwJxLcNLYDAB72FswZ/exec";
+const BASE_URL = "https://script.google.com/macros/s/AKfycbxrmD2cSnEdEpToTJDJokCo4if12CLGkMiaGDZktzvJzqmkB_TrGJ1oUfK1QuXZe5bF/exec";
 
 // 3. Fungsi Normalizer
 const parseRawRtlh = (raw: any): RtlhData => {
@@ -71,6 +72,7 @@ const parseRawRtlh = (raw: any): RtlhData => {
     timestamp: raw.timestamp || "",
     nik: raw.nik || "",
     nama: raw.nama || "",
+    desil: raw.desil || "", // <-- NORMALIZER DITAMBAHKAN
     telepon: raw.telepon || "",
     email: raw.email || "",
     kabupaten: raw.kabupaten || "",
@@ -182,6 +184,7 @@ export async function saveDataToSheet(formData: any): Promise<SaveResponse> {
     const payload = {
       nik: formData.nik || "",
       nama: formData.nama || "",
+      desil: formData.desil || "", // <-- PAYLOAD DITAMBAHKAN UNTUK INSERT
       phone: formData.telepon || formData.phone || "",
       email: formData.email || "",
       kabupaten: formData.kabupaten || "",
