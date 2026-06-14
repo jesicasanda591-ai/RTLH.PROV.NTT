@@ -45,7 +45,7 @@ function SubmitPage() {
     type: "error" as "error" | "warning"
   });
   
-  // UBAH: email diganti menjadi desil
+  // email diganti menjadi desil
   const [formData, setFormData] = useState({
     nama: "", nik: "", phone: "", desil: "",
     kabupaten: isProvinsi ? "" : userKab, alamat: "", kecamatan: "", kelurahan: "", rt: "", rw: "",
@@ -68,7 +68,7 @@ function SubmitPage() {
 
   const handleNextStep = (currentStep: number) => {
     if (currentStep === 1) {
-      // UBAH: Tambahkan validasi wajib isi untuk desil
+      // Validasi wajib isi untuk desil
       if (!formData.nama || formData.nik.length !== 16 || !formData.phone || !formData.desil) {
         setAlertModal({ 
           show: true, 
@@ -256,7 +256,7 @@ function SubmitPage() {
                     <div><label className={labelClass}>NIK *</label><input name="nik" className={inputClass} placeholder="Masukkan 16 digit NIK" maxLength={16} inputMode="numeric" value={formData.nik} onChange={handleChange} /></div>
                     <div><label className={labelClass}>NO. TELEPON *</label><input name="phone" className={inputClass} placeholder="Contoh: 081234567890" value={formData.phone} onChange={handleChange} /></div>
                     
-                    {/* UBAH: Mengganti Input Email menjadi Select Desil */}
+                    {/* UBAH: Dropdown Desil dan Note Link Kemensos */}
                     <div>
                       <label className={labelClass}>DESIL *</label>
                       <select 
@@ -269,10 +269,23 @@ function SubmitPage() {
                         <option value="" disabled>Pilih Status Desil...</option>
                         <option value="1">Desil 1 (Sangat Miskin)</option>
                         <option value="2">Desil 2 (Miskin)</option>
-                        <option value="3">Desil 3 (Rentan Miskin)</option>
-                        <option value="4">Desil 4 (Hampir Miskin)</option>
+                        <option value="3">Desil 3 (Hampir Miskin)</option>
+                        <option value="4">Desil 4 (Rentan Miskin)</option>
+                        <option value="5">Desil 5 (Pas-pasan)</option>
+                        <option value="6">Desil 6 (Menengah ke Atas)</option>
                         <option value="-">Tidak Ditemukan</option>
                       </select>
+                      <p className="mt-1.5 text-[11px] text-gray-500 italic leading-snug">
+                        * Jika belum tahu status desil, silakan cek NIK di{" "}
+                        <a 
+                          href="https://cekbansos.kemensos.go.id/" 
+                          target="_blank" 
+                          rel="noreferrer" 
+                          className="font-semibold text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          cekbansos.kemensos.go.id
+                        </a>
+                      </p>
                     </div>
 
                   </div>
@@ -348,7 +361,7 @@ function SubmitPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5 text-sm bg-gray-50 border border-gray-100 p-6 rounded-xl">
                      <div><span className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Nama</span><span className="font-semibold text-gray-900">{formData.nama}</span></div>
                      <div><span className="block text-[10px] font-bold text-gray-500 uppercase mb-1">NIK</span><span className="font-semibold text-gray-900">{formData.nik}</span></div>
-                     {/* UBAH: Tambahkan Info Desil di Konfirmasi Akhir */}
+                     {/* Info Desil di Konfirmasi Akhir */}
                      <div><span className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Desil</span><span className="font-semibold text-gray-900">{formData.desil}</span></div>
                      <div><span className="block text-[10px] font-bold text-gray-500 uppercase mb-1">No. Telepon</span><span className="font-semibold text-gray-900">{formData.phone}</span></div>
                      <div className="sm:col-span-2"><span className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Alamat</span><span className="font-medium text-gray-800">{formData.alamat}, RT {formData.rt}/RW {formData.rw}, {formData.kelurahan}, {formData.kecamatan}, {formData.kabupaten}</span></div>
