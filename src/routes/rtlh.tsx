@@ -172,11 +172,11 @@ function RtlhPage() {
                 <table className="w-full text-sm">
                   <thead className="border-b border-border bg-muted/50 text-xs font-semibold uppercase text-muted-foreground">
                     <tr>
-                      <th className="px-4 py-3 text-left">Nama</th>
-                      <th className="px-4 py-3 text-left">NIK</th>
+                      <th className="px-4 py-3 text-center">Nama</th>
+                      <th className="px-4 py-3 text-center">NIK</th>
                       <th className="px-4 py-3 text-center">Desil</th> {/* UBAH: Tambah Header Desil */}
-                      <th className="px-4 py-3 text-left">Lokasi</th>
-                      <th className="px-4 py-3 text-left">Status</th>
+                      <th className="px-4 py-3 text-center">Lokasi</th>
+                      <th className="px-4 py-3 text-center">Status</th>
                       <th className="px-4 py-3 text-center">Aksi</th>
                     </tr>
                   </thead>
