@@ -21,13 +21,14 @@ const KABUPATEN_LIST = [
   "Kota Kupang"
 ].sort();
 
+// UBAH: Teks deskripsi timeline diperbarui sesuai birokrasi SK Gubernur
 const TIMELINE_STEPS = [
   { step: 1, label: "Pengajuan", desc: "Dokumen pengajuan terverifikasi sistem." },
   { step: 2, label: "Verifikasi", desc: "Verifikasi kelengkapan dokumen berkas." },
   { step: 3, label: "Survei", desc: "Petugas melakukan kunjungan fisik dan dokumentasi." },
-  { step: 4, label: "Validasi", desc: "Validasi data final oleh admin kabupaten atau provinsi." },
-  { step: 5, label: "Penetapan", desc: "Penerima ditetapkan resmi melalui SK." },
-  { step: 6, label: "Selesai", desc: "Bantuan material/dana diturunkan." },
+  { step: 4, label: "Validasi", desc: "Validasi data final oleh admin kabupaten dan pengiriman SK Calon Penerima Bantuan Dari Bupati / Walikota Kepada Gubenur Provinsi NTT" },
+  { step: 5, label: "Penetapan", desc: "Validasi SK Calon Penerima Bantuan oleh admin provinsi" },
+  { step: 6, label: "Selesai", desc: "Penetapan SK Penerima Bantuan oleh Gubenur Provinsi NTT" },
 ];
 
 const STATUS_TO_STEP: Record<string, number> = {
