@@ -144,10 +144,24 @@ export function MonitoringPage() {
     }
   };
 
+  // --- PERBAIKAN BUG SEARCH & CRASH ADA DI SINI ---
   const filteredData = useMemo(() => {
     return serverBnbaData.filter((item) => {
-      const matchKab = isProvinsi ? item.kabupaten.toLowerCase() === selectedKabupaten.toLowerCase() : item.kabupaten.toLowerCase() === userKab.toLowerCase();
-      const matchSearch = item.nama.toLowerCase().includes(searchQuery.toLowerCase()) || item.nik.includes(searchQuery);
+      // 1. Amankan string kabupaten agar tidak error jika kosong
+      const rowKab = String(item.kabupaten || "").toLowerCase();
+      const targetKab = isProvinsi ? String(selectedKabupaten || "").toLowerCase() : String(userKab || "").toLowerCase();
+      
+      const cleanRowKab = rowKab.replace(/kabupaten|kab\.|kota/g, "").trim();
+      const cleanTargetKab = targetKab.replace(/kabupaten|kab\.|kota/g, "").trim();
+      const matchKab = cleanRowKab.includes(cleanTargetKab) || cleanTargetKab.includes(cleanRowKab);
+
+      // 2. Amankan string nama dan NIK agar tidak crash saat fungsi .toLowerCase() terpanggil
+      const safeNama = String(item.nama || "").toLowerCase();
+      const safeNik = String(item.nik || "").toLowerCase();
+      const query = String(searchQuery || "").toLowerCase().trim();
+
+      const matchSearch = query === "" || safeNama.includes(query) || safeNik.includes(query);
+
       return matchKab && matchSearch;
     });
   }, [serverBnbaData, selectedKabupaten, searchQuery, isProvinsi, userKab]);
@@ -159,7 +173,7 @@ export function MonitoringPage() {
 
   useEffect(() => {
     if (activePenerima) {
-      setStatusSelect(activePenerima.status);
+      setStatusSelect(activePenerima.status || "Pengajuan");
       setKerusakanSelect(activePenerima.kerusakan || "Rusak Ringan");
       setSelectedFile(null);
       
@@ -217,13 +231,33 @@ export function MonitoringPage() {
         <div className="grid gap-4 sm:grid-cols-3 bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-slate-500 flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> Pilih Kabupaten / Kota</label>
-            <select value={selectedKabupaten} onChange={(e) => setSelectedKabupaten(e.target.value)} disabled={!isProvinsi} className={`w-full rounded-lg border border-slate-200 px-3 py-2 text-sm transition-all ${!isProvinsi ? "bg-slate-50 text-slate-400 cursor-not-allowed" : "bg-white text-slate-800 focus:border-blue-500 focus:outline-none"}`}>
+            <select 
+              value={selectedKabupaten} 
+              onChange={(e) => {
+                setSelectedKabupaten(e.target.value);
+                setSelectedId(""); // Reset ID ketika wilayah diganti
+              }} 
+              disabled={!isProvinsi} 
+              className={`w-full rounded-lg border border-slate-200 px-3 py-2 text-sm transition-all ${!isProvinsi ? "bg-slate-50 text-slate-400 cursor-not-allowed" : "bg-white text-slate-800 focus:border-blue-500 focus:outline-none"}`}
+            >
               {KABUPATEN_LIST.map((kab) => <option key={kab} value={kab}>{kab}</option>)}
             </select>
           </div>
           <div className="sm:col-span-2 flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-slate-500">Cari Nama Penerima (BNBA)</label>
-            <div className="relative"><Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" /><input type="text" placeholder="Ketik nama penerima atau NIK..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full rounded-lg border border-slate-200 bg-white pl-9 pr-4 py-2 text-sm text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none" /></div>
+            <div className="relative">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+              <input 
+                type="text" 
+                placeholder="Ketik nama penerima atau NIK..." 
+                value={searchQuery} 
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setSelectedId(""); // Reset ID agar layar kanan ikut menyesuaikan pencarian
+                }} 
+                className="w-full rounded-lg border border-slate-200 bg-white pl-9 pr-4 py-2 text-sm text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none" 
+              />
+            </div>
           </div>
         </div>
 
@@ -231,12 +265,18 @@ export function MonitoringPage() {
           <div className="lg:col-span-4 xl:col-span-3 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col h-[820px]">
              <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 rounded-t-xl"><span className="text-xs font-bold uppercase tracking-wider text-slate-600">Daftar BNBA</span></div>
              <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
-               {isBnbaLoading ? <div className="p-8 text-center"><Loader2 className="animate-spin h-6 w-6 mx-auto text-blue-600" /></div> : filteredData.map((item) => (
-                  <button key={item.id} onClick={() => setSelectedId(item.id)} className={`w-full text-left p-4 transition-all ${activePenerima?.id === item.id ? "bg-blue-50/60 border-l-4 border-blue-600" : ""}`}>
-                    <h4 className="text-sm font-bold text-slate-800 line-clamp-1">{item.nama}</h4>
-                    <p className="text-xs text-slate-400 font-mono">NIK {item.nik.slice(0, 6)}...</p>
+               {isBnbaLoading ? (
+                 <div className="p-8 text-center"><Loader2 className="animate-spin h-6 w-6 mx-auto text-blue-600" /></div>
+               ) : filteredData.length === 0 ? (
+                 <div className="p-8 text-center text-xs text-slate-400">Tidak ada data yang cocok dengan pencarian Anda.</div>
+               ) : (
+                 filteredData.map((item) => (
+                  <button key={item.id} onClick={() => setSelectedId(item.id)} className={`w-full text-left p-4 transition-all ${activePenerima?.id === item.id ? "bg-blue-50/60 border-l-4 border-blue-600" : "hover:bg-slate-50 border-l-4 border-transparent"}`}>
+                    <h4 className="text-sm font-bold text-slate-800 line-clamp-1">{item.nama || "Tanpa Nama"}</h4>
+                    <p className="text-xs text-slate-400 font-mono">NIK {String(item.nik || "").slice(0, 6)}...</p>
                   </button>
-               ))}
+                 ))
+               )}
              </div>
           </div>
 
@@ -245,9 +285,9 @@ export function MonitoringPage() {
               <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-1.5"><User className="h-4 w-4 text-blue-600" /> Informasi Penerima</h3>
                  <div className="grid grid-cols-2 md:grid-cols-4 gap-y-4 gap-x-6 text-xs">
-                    <div><span className="text-slate-400 block mb-0.5">Nama</span><span className="font-bold text-slate-800">{activePenerima.nama}</span></div>
-                    <div><span className="text-slate-400 block mb-0.5">NIK</span><span className="font-bold text-slate-800 font-mono">{activePenerima.nik}</span></div>
-                    <div className="col-span-2"><span className="text-slate-400 block mb-0.5">Alamat</span><span className="font-bold text-slate-800">{activePenerima.alamat}</span></div>
+                    <div><span className="text-slate-400 block mb-0.5">Nama</span><span className="font-bold text-slate-800">{activePenerima.nama || "-"}</span></div>
+                    <div><span className="text-slate-400 block mb-0.5">NIK</span><span className="font-bold text-slate-800 font-mono">{activePenerima.nik || "-"}</span></div>
+                    <div className="col-span-2"><span className="text-slate-400 block mb-0.5">Alamat</span><span className="font-bold text-slate-800">{activePenerima.alamat || "-"}</span></div>
                  </div>
               </div>
 
@@ -257,7 +297,7 @@ export function MonitoringPage() {
                   <div className="relative pl-2 space-y-5">
                     <div className="absolute left-[19px] top-2 bottom-2 w-0.5 bg-slate-100" />
                     {TIMELINE_STEPS.map((stepItem) => {
-                      const isCompleted = stepItem.step <= (STATUS_TO_STEP[activePenerima.status] || 0);
+                      const isCompleted = stepItem.step <= (STATUS_TO_STEP[activePenerima.status || "Pengajuan"] || 0);
                       return (
                         <div key={stepItem.step} className="relative flex items-start gap-4">
                           <div className={`z-10 grid h-6 w-6 shrink-0 place-items-center rounded-full text-[10px] font-bold border ${isCompleted ? "bg-green-600 border-green-600 text-white" : "bg-white border-slate-200 text-slate-400"}`}>
@@ -341,7 +381,6 @@ export function MonitoringPage() {
                             <option value="Rusak Sedang">Rusak Sedang</option>
                             <option value="Rusak Berat">Rusak Berat</option>
                           </select>
-                          {/* UBAH: Tambahan Note sesuai permintaan */}
                           <p className="text-[10px] text-slate-400 italic mt-1">Dapat disesuaikan jika tingkat kerusakan dari hasil survei berbeda dengan data awal.</p>
                         </div>
                       </div>
@@ -462,7 +501,7 @@ export function MonitoringPage() {
                           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
                           <div>
                               <p className="text-xs font-bold uppercase mb-1">Penting: Persiapan Dokumen</p>
-                              <p className="text-[11px] leading-relaxed">
+                              <p className="text-[10px] leading-relaxed">
                                   Sebelum menekan tombol <strong className="text-amber-900">Update</strong>, pastikan file foto progres pekerjaan (tampak depan/samping/belakang/dalam) telah diunggah atau tersedia di sistem untuk tahap progres yang dipilih.
                               </p>
                           </div>
@@ -493,7 +532,9 @@ export function MonitoringPage() {
 
             </div>
           ) : (
-            <div className="lg:col-span-8 xl:col-span-9 bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-400 text-xs">Pilih penerima di panel kiri untuk melihat detail...</div>
+            <div className="lg:col-span-8 xl:col-span-9 bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-400 text-xs flex items-center justify-center h-[820px]">
+              Silakan pilih nama dari daftar sebelah kiri atau gunakan kotak pencarian.
+            </div>
           )}
         </div>
       </div>
