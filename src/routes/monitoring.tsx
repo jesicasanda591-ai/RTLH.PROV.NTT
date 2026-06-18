@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getBnbaData, updateBnbaStatus, updateBnbaProgress, RtlhData } from "@/lib/api";
 import { 
   Search, CheckCircle2, User, MapPin, 
-  Loader2, FolderOpen, AlertCircle, X, UploadCloud, FileCheck
+  Loader2, FolderOpen, AlertCircle, X
 } from "lucide-react";
 
 // URL Web App Apps Script kamu
@@ -70,8 +70,6 @@ export function MonitoringPage() {
   const [longBaru, setLongBaru] = useState<string>(""); 
   
   const [selectedProgressValue, setSelectedProgressValue] = useState<number>(25);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [uploadLoading, setUploadLoading] = useState(false);
 
   const { data: serverBnbaData = [], isLoading: isBnbaLoading } = useQuery<RtlhData[]>({
     queryKey: ["bnbaData"],
@@ -99,55 +97,8 @@ export function MonitoringPage() {
     },
   });
 
-  const handleFileUpload = async () => {
-    if (!selectedFile || !activePenerima) return;
-    setUploadLoading(true);
-
-    try {
-      const reader = new FileReader();
-      const base64Promise = new Promise<string>((resolve) => {
-        reader.onload = () => {
-          const base64 = (reader.result as string).split(",")[1];
-          resolve(base64);
-        };
-        reader.readAsDataURL(selectedFile);
-      });
-
-      const base64Data = await base64Promise;
-
-      const response = await fetch(BASE_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({
-          action: "uploadFile",
-          id: activePenerima.id,
-          fileName: selectedFile.name,
-          mimeType: selectedFile.type,
-          fileData: base64Data
-        }),
-      });
-
-      const res = await response.json();
-      if (res.status === "success") {
-        setToastConfig({ title: "Upload Sukses!", msg: "Dokumen administrasi berhasil disimpan di Drive Utama warga." });
-        setShowToast(true);
-        setSelectedFile(null);
-        setTimeout(() => setShowToast(false), 3000);
-      } else {
-        alert("Gagal: " + res.message);
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Terjadi kesalahan saat mengunggah file.");
-    } finally {
-      setUploadLoading(false);
-    }
-  };
-
-  // --- PERBAIKAN BUG SEARCH & CRASH ADA DI SINI ---
   const filteredData = useMemo(() => {
     return serverBnbaData.filter((item) => {
-      // 1. Amankan string kabupaten agar tidak error jika kosong
       const rowKab = String(item.kabupaten || "").toLowerCase();
       const targetKab = isProvinsi ? String(selectedKabupaten || "").toLowerCase() : String(userKab || "").toLowerCase();
       
@@ -155,7 +106,6 @@ export function MonitoringPage() {
       const cleanTargetKab = targetKab.replace(/kabupaten|kab\.|kota/g, "").trim();
       const matchKab = cleanRowKab.includes(cleanTargetKab) || cleanTargetKab.includes(cleanRowKab);
 
-      // 2. Amankan string nama dan NIK agar tidak crash saat fungsi .toLowerCase() terpanggil
       const safeNama = String(item.nama || "").toLowerCase();
       const safeNik = String(item.nik || "").toLowerCase();
       const query = String(searchQuery || "").toLowerCase().trim();
@@ -175,7 +125,6 @@ export function MonitoringPage() {
     if (activePenerima) {
       setStatusSelect(activePenerima.status || "Pengajuan");
       setKerusakanSelect(activePenerima.kerusakan || "Rusak Ringan");
-      setSelectedFile(null);
       
       if (activePenerima.koordinat) {
         const parts = activePenerima.koordinat.split(",");
@@ -235,7 +184,7 @@ export function MonitoringPage() {
               value={selectedKabupaten} 
               onChange={(e) => {
                 setSelectedKabupaten(e.target.value);
-                setSelectedId(""); // Reset ID ketika wilayah diganti
+                setSelectedId(""); 
               }} 
               disabled={!isProvinsi} 
               className={`w-full rounded-lg border border-slate-200 px-3 py-2 text-sm transition-all ${!isProvinsi ? "bg-slate-50 text-slate-400 cursor-not-allowed" : "bg-white text-slate-800 focus:border-blue-500 focus:outline-none"}`}
@@ -253,7 +202,7 @@ export function MonitoringPage() {
                 value={searchQuery} 
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
-                  setSelectedId(""); // Reset ID agar layar kanan ikut menyesuaikan pencarian
+                  setSelectedId(""); 
                 }} 
                 className="w-full rounded-lg border border-slate-200 bg-white pl-9 pr-4 py-2 text-sm text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none" 
               />
@@ -386,7 +335,7 @@ export function MonitoringPage() {
                       </div>
                     )}
 
-                    {/* KHUSUS VALIDASI (UPLOAD FILE) */}
+                    {/* KHUSUS VALIDASI (LINK KE DRIVE) */}
                     {statusSelect === "Validasi" && (
                       <div className="space-y-3 border border-blue-100 bg-blue-50/40 rounded-xl p-4 text-center animate-in fade-in slide-in-from-top-2 duration-300 mt-4">
                         <label className="block text-xs font-bold text-blue-950 uppercase tracking-wide mb-1 text-left">
@@ -404,45 +353,12 @@ export function MonitoringPage() {
                           </a>
                         )}
 
-                        <div className="relative cursor-pointer bg-white rounded-lg border border-slate-200 p-4 hover:bg-slate-50 transition-all flex flex-col items-center justify-center gap-1 mt-2">
-                          <input 
-                            type="file" 
-                            accept=".pdf" 
-                            className="absolute inset-0 opacity-0 cursor-pointer" 
-                            onChange={(e) => {
-                              if (e.target.files?.[0]) setSelectedFile(e.target.files[0]);
-                            }}
-                          />
-                          {selectedFile ? (
-                            <>
-                              <FileCheck className="h-7 w-7 text-green-600 animate-bounce" />
-                              <span className="text-xs font-semibold text-slate-700 max-w-[180px] truncate">{selectedFile.name}</span>
-                            </>
-                          ) : (
-                            <>
-                              <UploadCloud className="h-7 w-7 text-blue-500" />
-                              <span className="text-xs font-medium text-slate-600">Pilih Berkas Upload</span>
-                              <span className="text-[10px] text-slate-400 font-bold text-red-500">Wajib 1 File PDF (Maks 10MB)</span>
-                            </>
-                          )}
-                        </div>
-
-                        {selectedFile && (
-                          <button 
-                            onClick={handleFileUpload} 
-                            disabled={uploadLoading}
-                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-lg text-xs transition-colors shadow-sm flex items-center justify-center gap-1 mt-2"
-                          >
-                            {uploadLoading ? <><Loader2 className="animate-spin h-3.5 w-3.5" />Mengunggah...</> : "Mulai Upload ke Drive"}
-                          </button>
-                        )}
-
                         <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3.5 text-left">
                            <h4 className="text-xs font-bold text-amber-900 mb-2 flex items-center gap-1.5">
                              <AlertCircle className="h-4 w-4" /> Syarat Dokumen Validasi
                            </h4>
                            <p className="text-[10px] text-amber-800 mb-2 leading-relaxed">
-                             Seluruh dokumen wajib digabungkan dan diunggah dalam <strong>1 (satu) file PDF</strong> dengan urutan:
+                             Seluruh dokumen wajib digabungkan dan diunggah dalam <strong>1 (satu) file PDF</strong> ke dalam Folder Utama dengan urutan:
                            </p>
                            <ol className="list-decimal pl-4 pr-1 text-[10px] text-amber-800 space-y-1.5 mb-3 text-justify">
                              <li>Surat Pernyataan Bupati/Wali Kota tentang kebenaran informasi dan validitas data usulan;</li>
@@ -501,7 +417,7 @@ export function MonitoringPage() {
                           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
                           <div>
                               <p className="text-xs font-bold uppercase mb-1">Penting: Persiapan Dokumen</p>
-                              <p className="text-[10px] leading-relaxed">
+                              <p className="text-[11px] leading-relaxed">
                                   Sebelum menekan tombol <strong className="text-amber-900">Update</strong>, pastikan file foto progres pekerjaan (tampak depan/samping/belakang/dalam) telah diunggah atau tersedia di sistem untuk tahap progres yang dipilih.
                               </p>
                           </div>
