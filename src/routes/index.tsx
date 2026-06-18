@@ -70,7 +70,7 @@ function Index() {
       <section className="relative overflow-hidden bg-gradient-hero text-primary-foreground py-16 lg:py-24">
         <div className="mx-auto max-w-7xl px-4 lg:px-8">
           <h1 className="text-4xl font-extrabold lg:text-6xl">
-            Sistem Informasi <br /> <span className="text-accent-gold">Rumah Tidak Layak Huni</span>
+            Sistem Informasi Manajemen <br /> <span className="text-accent-gold">Rumah Tidak Layak Huni</span>
           </h1>
           <p className="mt-5 max-w-xl text-lg opacity-90">
             Platform terpadu untuk pendataan, verifikasi, dan monitoring bantuan rumah layak huni Provinsi NTT.

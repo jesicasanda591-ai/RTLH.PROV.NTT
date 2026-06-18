@@ -16,7 +16,7 @@ export function SiteFooter() {
             </div>
           </div>
           <p className="mt-4 text-sm opacity-80">
-            Sistem Informasi Manajemen Rumah Tidak Layak Huni — mendukung percepatan pembangunan hunian layak bagi masyarakat Indonesia.
+            Sistem Informasi Manajemen Manajemen Rumah Tidak Layak Huni — mendukung percepatan pembangunan hunian layak bagi masyarakat Indonesia.
           </p>
         </div>
 
@@ -51,7 +51,7 @@ export function SiteFooter() {
       <div className="border-t border-white/10">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-5 text-xs opacity-70 lg:flex-row lg:px-8">
           <p>© {new Date().getFullYear()} Dinas Perumahan Rakyat dan Kawasan Permukman Provinsi Nusa Tenggara Timur</p>
-          <p>v1.0 · Sistem Informasi Manajemen RTLH</p>
+          <p>v1.0 · Sistem Informasi Manajemen Manajemen RTLH</p>
         </div>
       </div>
     </footer>

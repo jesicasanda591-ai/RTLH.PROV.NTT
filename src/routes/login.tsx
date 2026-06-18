@@ -6,7 +6,7 @@ export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
       { title: "Login · SIM-RTLH · NTT" },
-      { name: "description", content: "Halaman login sistem informasi RTLH NTT." },
+      { name: "description", content: "Halaman login Sistem Informasi Manajemen RTLH NTT." },
     ],
   }),
   beforeLoad: () => {
@@ -71,7 +71,7 @@ function LoginPage() {
               SIM-RTLH • NTT
             </p>
             <h2 className="text-2xl font-extrabold text-primary-deep">
-              Sistem Informasi <br />
+              Sistem Informasi Manajemen <br />
               <span className="text-foreground">Rumah Tidak Layak Huni</span>
             </h2>
           </div>
