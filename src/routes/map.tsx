@@ -161,11 +161,6 @@ function MapPage() {
               <MapBoundsUpdater rows={filteredRows} />
 
               {filteredRows.map((r) => {
-                const nama = r.nama || "-";
-                const kel = r.kelurahan || "";
-                const almt = r.alamat || "";
-                const textAlamatPeta = [almt, kel].filter(x => x && x !== "-").join(", ");
-
                 return (
                   <CircleMarker
                     key={r.id || `${r.lat}-${r.lng}`}
@@ -181,10 +176,13 @@ function MapPage() {
                       mouseout: (e) => e.target.setStyle({ fillOpacity: 0.7, radius: 8 })
                     }}
                   >
+                    {/* BAGIAN POPUP YANG DIPERBAIKI */}
                     <Popup>
                       <div className="text-sm pb-1 min-w-[200px]">
-                        <div className="font-bold text-slate-800 text-base mb-1">{nama}</div>
-                        <div className="text-xs text-slate-500 leading-snug">{textAlamatPeta || "Alamat belum lengkap"}</div>
+                        <div className="font-bold text-slate-800 text-base mb-1">{r.nama || "Tanpa Nama"}</div>
+                        <div className="text-xs text-slate-500 leading-snug">
+                           {[r.alamat, r.kelurahan].filter(x => x && x !== "-").join(", ") || "Alamat belum lengkap"}
+                        </div>
                         <div className="mt-3 bg-slate-50 p-2 rounded border border-slate-100 space-y-1.5">
                             <div className="text-xs flex justify-between">
                                 <span className="text-slate-500">Kondisi:</span>
