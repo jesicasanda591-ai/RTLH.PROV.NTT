@@ -8,7 +8,7 @@ export interface RtlhData {
   timestamp: string;
   nik: string;
   nama: string;
-  desil: string; // <-- KOLOM BARU DITAMBAHKAN
+  desil: string; 
   telepon: string;
   email: string;
   kabupaten: string;
@@ -61,7 +61,7 @@ export interface ActivityData {
 }
 
 // URL Web App Apps Script
-const BASE_URL = "https://script.google.com/macros/s/AKfycbxrmD2cSnEdEpToTJDJokCo4if12CLGkMiaGDZktzvJzqmkB_TrGJ1oUfK1QuXZe5bF/exec";
+const BASE_URL = "https://script.google.com/macros/s/AKfycbzbKqJ4obyCEDXB62dqqBzpluC_-XOavuGY47WYqTEjVBU8Gj9KYm-TEshPrYxIHu9_/exec";
 
 // 3. Fungsi Normalizer
 const parseRawRtlh = (raw: any): RtlhData => {
@@ -72,7 +72,7 @@ const parseRawRtlh = (raw: any): RtlhData => {
     timestamp: raw.timestamp || "",
     nik: raw.nik || "",
     nama: raw.nama || "",
-    desil: raw.desil || "", // <-- NORMALIZER DITAMBAHKAN
+    desil: raw.desil || "", 
     telepon: raw.telepon || "",
     email: raw.email || "",
     kabupaten: raw.kabupaten || "",
@@ -112,16 +112,11 @@ export async function getBnbaData(): Promise<RtlhData[]> {
 
 export const getRtlhRows = getBnbaData;
 
-// --- FUNGSI DIPERBARUI: Tambah parameter `koordinat` ---
-export async function updateBnbaStatus(id: string, status: string, kerusakan?: string, koordinat?: string): Promise<any> {
+// --- A. FUNGSI UPDATE STATUS ---
+export async function updateBnbaStatus(id: string, status: string, kerusakan?: string): Promise<any> {
   try {
     const payload: any = { action: "updateStatus", id, status, kerusakan };
     
-    // Masukkan koordinat ke payload jika ada nilainya
-    if (koordinat) {
-      payload.koordinat = koordinat;
-    }
-
     const response = await fetch(BASE_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -135,7 +130,7 @@ export async function updateBnbaStatus(id: string, status: string, kerusakan?: s
   }
 }
 
-// FUNGSI BARU: Mengirim progres ke Spreadsheet
+// --- B. FUNGSI UPDATE PROGRESS ---
 export async function updateBnbaProgress(id: string, progressValue: number): Promise<any> {
   try {
     const response = await fetch(BASE_URL, {
@@ -147,6 +142,24 @@ export async function updateBnbaProgress(id: string, progressValue: number): Pro
     return JSON.parse(textData);
   } catch (error: any) {
     console.error("Error updateBnbaProgress:", error);
+    return { status: "error", message: error.message };
+  }
+}
+
+// --- C. FUNGSI BARU: UPDATE KOORDINAT ---
+export async function updateBnbaKoordinat(id: string, koordinat: string): Promise<any> {
+  try {
+    const payload = { action: "updateKoordinat", id, koordinat };
+
+    const response = await fetch(BASE_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload),
+    });
+    const textData = await response.text();
+    return JSON.parse(textData);
+  } catch (error: any) {
+    console.error("Error updateBnbaKoordinat:", error);
     return { status: "error", message: error.message };
   }
 }
@@ -192,7 +205,7 @@ export async function saveDataToSheet(formData: any): Promise<SaveResponse> {
     const payload = {
       nik: formData.nik || "",
       nama: formData.nama || "",
-      desil: formData.desil || "", // <-- PAYLOAD DITAMBAHKAN UNTUK INSERT
+      desil: formData.desil || "", 
       phone: formData.telepon || formData.phone || "",
       email: formData.email || "",
       kabupaten: formData.kabupaten || "",

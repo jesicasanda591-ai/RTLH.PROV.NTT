@@ -2,7 +2,8 @@ import { useState, useMemo, useEffect } from "react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { PageShell } from "@/components/page-shell";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getBnbaData, updateBnbaStatus, updateBnbaProgress, RtlhData } from "@/lib/api";
+// UBAH: Tambahkan import updateBnbaKoordinat
+import { getBnbaData, updateBnbaStatus, updateBnbaProgress, updateBnbaKoordinat, RtlhData } from "@/lib/api";
 import { 
   Search, CheckCircle2, User, MapPin, 
   Loader2, FolderOpen, AlertCircle, X
@@ -21,7 +22,6 @@ const KABUPATEN_LIST = [
   "Kota Kupang"
 ].sort();
 
-// UBAH: Teks deskripsi timeline diperbarui sesuai birokrasi SK Gubernur
 const TIMELINE_STEPS = [
   { step: 1, label: "Pengajuan", desc: "Dokumen pengajuan terverifikasi sistem." },
   { step: 2, label: "Verifikasi", desc: "Verifikasi kelengkapan dokumen berkas." },
@@ -77,15 +77,32 @@ export function MonitoringPage() {
     queryFn: getBnbaData,
   });
 
+  // UBAH: Mutation sekarang menghandle dua request API secara berurutan jika ada koordinat
   const mutation = useMutation({
-    mutationFn: ({ id, status, kerusakan, koordinat }: { id: string; status: string; kerusakan: string; koordinat?: string }) => 
-      updateBnbaStatus(id, status, kerusakan, koordinat),
+    mutationFn: async ({ id, status, kerusakan, koordinat }: { id: string; status: string; kerusakan: string; koordinat?: string }) => {
+      // 1. Kirim update status dan kerusakan
+      const statusRes = await updateBnbaStatus(id, status, kerusakan);
+      if (statusRes.status === "error") throw new Error(statusRes.message);
+
+      // 2. Jika terdapat input koordinat (di tahap survei), kirim update koordinat
+      if (koordinat && koordinat.trim() !== "" && koordinat.trim() !== ",") {
+        const koordRes = await updateBnbaKoordinat(id, koordinat);
+        if (koordRes.status === "error") throw new Error(koordRes.message);
+      }
+
+      return statusRes;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bnbaData"] });
       setToastConfig({ title: "Status Diperbarui!", msg: "Perubahan data dan status berhasil disimpan." });
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
     },
+    onError: (error: any) => {
+      setToastConfig({ title: "Gagal Menyimpan!", msg: error.message || "Terjadi kesalahan sistem." });
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 4000);
+    }
   });
 
   const progressMutation = useMutation({
@@ -140,7 +157,7 @@ export function MonitoringPage() {
 
   const handleSaveStatus = () => { 
     if (activePenerima) {
-      const combinedKoordinat = (latBaru || longBaru) ? `${latBaru}, ${longBaru}` : "";
+      const combinedKoordinat = (latBaru || longBaru) ? `${latBaru},${longBaru}` : "";
       
       mutation.mutate({ 
         id: activePenerima.id, 
@@ -158,8 +175,8 @@ export function MonitoringPage() {
       {/* Toast Notification */}
       {showToast && (
         <div className="fixed top-24 right-6 z-50 animate-in slide-in-from-right-5 fade-in duration-300">
-           <div className="bg-white border border-green-200 shadow-xl rounded-lg p-4 flex items-center gap-3 border-l-4 border-l-green-500">
-              <CheckCircle2 className="text-green-500 h-6 w-6" />
+           <div className={`bg-white border shadow-xl rounded-lg p-4 flex items-center gap-3 border-l-4 ${toastConfig.title.includes("Gagal") ? "border-l-red-500 border-red-200" : "border-l-green-500 border-green-200"}`}>
+              {toastConfig.title.includes("Gagal") ? <AlertCircle className="text-red-500 h-6 w-6" /> : <CheckCircle2 className="text-green-500 h-6 w-6" />}
               <div>
                 <h4 className="text-sm font-bold text-slate-800">{toastConfig.title}</h4>
                 <p className="text-xs text-slate-500">{toastConfig.msg}</p>
