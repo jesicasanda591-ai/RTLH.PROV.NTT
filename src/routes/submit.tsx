@@ -59,7 +59,8 @@ function SubmitPage() {
         const onlyNums = e.target.value.replace(/[^0-9]/g, '');
         setFormData({ ...formData, [e.target.name]: onlyNums });
     } else if (e.target.name === "lat" || e.target.name === "long") {
-        const safeCoord = e.target.value.replace(/,/g, '.');
+        // PERBAIKAN: Ubah koma jadi titik, dan HAPUS SEMUA SPASI tersembunyi
+        const safeCoord = e.target.value.replace(/,/g, '.').replace(/\s+/g, '');
         setFormData({ ...formData, [e.target.name]: safeCoord });
     } else {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -115,19 +116,38 @@ function SubmitPage() {
         return;
       }
 
-      // --- VALIDASI BLOKIR FORMAT DMS ---
-      // Regex ini memastikan koordinat HANYA boleh berisi angka, titik, dan minus
+      // --- VALIDASI FORMAT DD (DESIMAL) ---
+      
+      // Bersihkan spasi ekstra sekali lagi untuk keamanan ganda
+      const cleanLat = formData.lat.trim();
+      const cleanLong = formData.long.trim();
+
+      // 1. Validasi Karakter
       const ddRegex = /^-?\d+(\.\d+)?$/;
-      if (!ddRegex.test(formData.lat) || !ddRegex.test(formData.long)) {
+      if (!ddRegex.test(cleanLat) || !ddRegex.test(cleanLong)) {
         setAlertModal({ 
           show: true, 
           title: "Format Koordinat Ditolak!", 
-          message: "Koordinat hanya boleh berisi angka desimal dan tanda minus (contoh: -10.123456).\n\nSistem menolak format DMS yang mengandung spasi, huruf arah (S, E, N, W), atau simbol derajat (° ' \").", 
+          message: "Koordinat hanya boleh berisi angka desimal dan tanda minus (opsional). Contoh: -10.123456 atau 123.456789.\n\nSistem menolak format DMS yang mengandung huruf (S, E, N, W), atau simbol derajat (° ' \").", 
           type: "error" 
         });
         return;
       }
-      // ----------------------------------
+
+      // 2. Validasi Logika Geografis
+      const latNum = parseFloat(cleanLat);
+      const longNum = parseFloat(cleanLong);
+      
+      if (latNum < -90 || latNum > 90 || longNum < -180 || longNum > 180) {
+        setAlertModal({ 
+          show: true, 
+          title: "Nilai Koordinat Tidak Masuk Akal!", 
+          message: "Standar Format DD (Decimal Degrees):\n- Latitude harus berada di antara -90 hingga 90.\n- Longitude harus berada di antara -180 hingga 180.\n\nSilakan periksa kembali angka yang Anda masukkan.", 
+          type: "error" 
+        });
+        return;
+      }
+      // ------------------------------------------------
 
       setStep(3);
     } else if (currentStep === 3) {
@@ -334,8 +354,8 @@ function SubmitPage() {
                     <div><label className={labelClass}>KELURAHAN/DESA *</label><input name="kelurahan" className={inputClass} placeholder="Masukkan Kelurahan/Desa" value={formData.kelurahan} onChange={handleChange} /></div>
                     <div><label className={labelClass}>RT *</label><input name="rt" className={inputClass} placeholder="000" inputMode="numeric" value={formData.rt} onChange={handleChange} /></div>
                     <div><label className={labelClass}>RW *</label><input name="rw" className={inputClass} placeholder="000" inputMode="numeric" value={formData.rw} onChange={handleChange} /></div>
-                    <div><label className={labelClass}>LATITUDE *</label><input name="lat" className={inputClass} placeholder="-10.xxxxxx" value={formData.lat} onChange={handleChange} /></div>
-                    <div><label className={labelClass}>LONGITUDE *</label><input name="long" className={inputClass} placeholder="123.xxxxxx" value={formData.long} onChange={handleChange} /></div>
+                    <div><label className={labelClass}>LATITUDE *</label><input name="lat" className={inputClass} placeholder="Contoh: -10.123456" value={formData.lat} onChange={handleChange} /></div>
+                    <div><label className={labelClass}>LONGITUDE *</label><input name="long" className={inputClass} placeholder="Contoh: 123.123456" value={formData.long} onChange={handleChange} /></div>
                   </div>
                   <div className="flex justify-between items-center pt-4 border-t border-gray-100 mt-6">
                     <button onClick={() => setStep(1)} className="text-sm font-bold text-gray-500 hover:text-[#072456] transition-colors">← Kembali</button>
