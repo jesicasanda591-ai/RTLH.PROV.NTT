@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { PageShell } from "@/components/page-shell";
-// Menambahkan AlertCircle untuk ikon Pop-up peringatan
 import { ClipboardCheck, ArrowRight, Save, CheckCircle, Loader2, FolderOpen, ExternalLink, AlertCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
@@ -27,6 +26,115 @@ export const Route = createFileRoute("/submit")({
   component: SubmitPage,
 });
 
+// --- KOMPONEN BARU: Input Koordinat (DD & DMS) ---
+function CoordinateInput({ latValue, longValue, onChange, inputClass, labelClass }: { latValue: string, longValue: string, onChange: (lat: string, lng: string) => void, inputClass: string, labelClass: string }) {
+  const [format, setFormat] = useState<"DD" | "DMS">("DD");
+
+  const [dms, setDms] = useState({
+    latDeg: "", latMin: "", latSec: "", latDir: "S",
+    lngDeg: "", lngMin: "", lngSec: "", lngDir: "E",
+  });
+
+  const handleDmsChange = (field: string, val: string) => {
+    const newDms = { ...dms, [field]: val };
+    setDms(newDms);
+    
+    const convertToDD = (deg: string, min: string, sec: string, dir: string) => {
+      if (!deg && !min && !sec) return "";
+      let dd = Number(deg || 0) + Number(min || 0) / 60 + Number(sec || 0) / 3600;
+      if (dir === "S" || dir === "W") dd = dd * -1;
+      return dd.toFixed(6);
+    };
+
+    const newLat = convertToDD(newDms.latDeg, newDms.latMin, newDms.latSec, newDms.latDir);
+    const newLng = convertToDD(newDms.lngDeg, newDms.lngMin, newDms.lngSec, newDms.lngDir);
+    onChange(newLat, newLng);
+  };
+
+  const dmsInputClass = "w-full rounded-lg border border-gray-300 bg-white px-2 py-3 text-sm focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 outline-none placeholder:text-gray-400 text-center";
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+        <label className={`${labelClass} mb-0`}>FORMAT KOORDINAT:</label>
+        <div className="flex rounded-lg border border-gray-200 bg-gray-50 p-1">
+          <button
+            type="button"
+            onClick={() => setFormat("DD")}
+            className={`rounded-md px-4 py-1.5 text-xs font-bold transition-all ${format === "DD" ? "bg-white text-blue-700 shadow-sm border border-gray-200" : "text-gray-500 hover:text-gray-700"}`}
+          >
+            Desimal (DD)
+          </button>
+          <button
+            type="button"
+            onClick={() => setFormat("DMS")}
+            className={`rounded-md px-4 py-1.5 text-xs font-bold transition-all ${format === "DMS" ? "bg-white text-blue-700 shadow-sm border border-gray-200" : "text-gray-500 hover:text-gray-700"}`}
+          >
+            Derajat (DMS)
+          </button>
+        </div>
+      </div>
+
+      {format === "DD" && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 animate-in fade-in duration-300">
+          <div>
+            <label className={labelClass}>LATITUDE *</label>
+            <input 
+              type="text" 
+              value={latValue} 
+              // PERBAIKAN: .replace(/,/g, '.')
+              onChange={(e) => onChange(e.target.value.replace(/,/g, '.'), longValue)} 
+              placeholder="-10.xxxxxx" 
+              className={inputClass} 
+            />
+          </div>
+          <div>
+            <label className={labelClass}>LONGITUDE *</label>
+            <input 
+              type="text" 
+              value={longValue} 
+              // PERBAIKAN: .replace(/,/g, '.')
+              onChange={(e) => onChange(latValue, e.target.value.replace(/,/g, '.'))} 
+              placeholder="123.xxxxxx" 
+              className={inputClass} 
+            />
+          </div>
+        </div>
+      )}
+
+      {format === "DMS" && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 animate-in fade-in duration-300">
+          <div>
+            <label className={labelClass}>LATITUDE (DMS) *</label>
+            <div className="flex gap-2">
+              <input type="number" placeholder="Deg (°)" value={dms.latDeg} onChange={(e) => handleDmsChange("latDeg", e.target.value)} className={dmsInputClass} />
+              <input type="number" placeholder="Min (')" value={dms.latMin} onChange={(e) => handleDmsChange("latMin", e.target.value)} className={dmsInputClass} />
+              <input type="number" placeholder='Sec (")' value={dms.latSec} onChange={(e) => handleDmsChange("latSec", e.target.value)} className={dmsInputClass} />
+              <select value={dms.latDir} onChange={(e) => handleDmsChange("latDir", e.target.value)} className="rounded-lg border border-gray-300 bg-gray-50 px-2 py-3 text-xs font-bold outline-none">
+                <option value="S">S</option>
+                <option value="N">N</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className={labelClass}>LONGITUDE (DMS) *</label>
+            <div className="flex gap-2">
+              <input type="number" placeholder="Deg (°)" value={dms.lngDeg} onChange={(e) => handleDmsChange("lngDeg", e.target.value)} className={dmsInputClass} />
+              <input type="number" placeholder="Min (')" value={dms.lngMin} onChange={(e) => handleDmsChange("lngMin", e.target.value)} className={dmsInputClass} />
+              <input type="number" placeholder='Sec (")' value={dms.lngSec} onChange={(e) => handleDmsChange("lngSec", e.target.value)} className={dmsInputClass} />
+              <select value={dms.lngDir} onChange={(e) => handleDmsChange("lngDir", e.target.value)} className="rounded-lg border border-gray-300 bg-gray-50 px-2 py-3 text-xs font-bold outline-none">
+                <option value="E">E</option>
+                <option value="W">W</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- KOMPONEN UTAMA ---
 function SubmitPage() {
   const userKab = typeof window !== "undefined" ? (sessionStorage.getItem("user_kabupaten") || localStorage.getItem("user_kabupaten") || "") : "";
   const isProvinsi = userKab.toLowerCase() === "provinsi" || userKab.toLowerCase() === "admin";
@@ -37,7 +145,6 @@ function SubmitPage() {
   const [generatedId, setGeneratedId] = useState("");
   const [generatedFolderUrl, setGeneratedFolderUrl] = useState(""); 
   
-  // State baru untuk mengontrol kustom pop-up peringatan
   const [alertModal, setAlertModal] = useState({
     show: false,
     title: "",
@@ -45,7 +152,6 @@ function SubmitPage() {
     type: "error" as "error" | "warning"
   });
   
-  // email diganti menjadi desil
   const [formData, setFormData] = useState({
     nama: "", nik: "", phone: "", desil: "",
     kabupaten: isProvinsi ? "" : userKab, alamat: "", kecamatan: "", kelurahan: "", rt: "", rw: "",
@@ -68,7 +174,6 @@ function SubmitPage() {
 
   const handleNextStep = (currentStep: number) => {
     if (currentStep === 1) {
-      // Validasi wajib isi untuk desil
       if (!formData.nama || formData.nik.length !== 16 || !formData.phone || !formData.desil) {
         setAlertModal({ 
           show: true, 
@@ -256,7 +361,6 @@ function SubmitPage() {
                     <div><label className={labelClass}>NIK *</label><input name="nik" className={inputClass} placeholder="Masukkan 16 digit NIK" maxLength={16} inputMode="numeric" value={formData.nik} onChange={handleChange} /></div>
                     <div><label className={labelClass}>NO. TELEPON *</label><input name="phone" className={inputClass} placeholder="Contoh: 081234567890" value={formData.phone} onChange={handleChange} /></div>
                     
-                    {/* UBAH: Dropdown Desil dan Note Link Kemensos */}
                     <div>
                       <label className={labelClass}>DESIL *</label>
                       <select 
@@ -321,8 +425,17 @@ function SubmitPage() {
                     <div><label className={labelClass}>KELURAHAN/DESA *</label><input name="kelurahan" className={inputClass} placeholder="Masukkan Kelurahan/Desa" value={formData.kelurahan} onChange={handleChange} /></div>
                     <div><label className={labelClass}>RT *</label><input name="rt" className={inputClass} placeholder="000" inputMode="numeric" value={formData.rt} onChange={handleChange} /></div>
                     <div><label className={labelClass}>RW *</label><input name="rw" className={inputClass} placeholder="000" inputMode="numeric" value={formData.rw} onChange={handleChange} /></div>
-                    <div><label className={labelClass}>LATITUDE *</label><input name="lat" className={inputClass} placeholder="-10.xxxxxx" value={formData.lat} onChange={handleChange} /></div>
-                    <div><label className={labelClass}>LONGITUDE *</label><input name="long" className={inputClass} placeholder="123.xxxxxx" value={formData.long} onChange={handleChange} /></div>
+                    
+                    {/* BAGIAN KOORDINAT YANG DIPERBARUI (DD / DMS) */}
+                    <div className="sm:col-span-2 pt-2 border-t border-gray-100 mt-2">
+                      <CoordinateInput 
+                        latValue={formData.lat}
+                        longValue={formData.long}
+                        onChange={(lat, long) => setFormData({ ...formData, lat, long })}
+                        inputClass={inputClass}
+                        labelClass={labelClass}
+                      />
+                    </div>
                   </div>
                   <div className="flex justify-between items-center pt-4 border-t border-gray-100 mt-6">
                     <button onClick={() => setStep(1)} className="text-sm font-bold text-gray-500 hover:text-[#072456] transition-colors">← Kembali</button>
@@ -361,7 +474,6 @@ function SubmitPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5 text-sm bg-gray-50 border border-gray-100 p-6 rounded-xl">
                      <div><span className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Nama</span><span className="font-semibold text-gray-900">{formData.nama}</span></div>
                      <div><span className="block text-[10px] font-bold text-gray-500 uppercase mb-1">NIK</span><span className="font-semibold text-gray-900">{formData.nik}</span></div>
-                     {/* Info Desil di Konfirmasi Akhir */}
                      <div><span className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Desil</span><span className="font-semibold text-gray-900">{formData.desil}</span></div>
                      <div><span className="block text-[10px] font-bold text-gray-500 uppercase mb-1">No. Telepon</span><span className="font-semibold text-gray-900">{formData.phone}</span></div>
                      <div className="sm:col-span-2"><span className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Alamat</span><span className="font-medium text-gray-800">{formData.alamat}, RT {formData.rt}/RW {formData.rw}, {formData.kelurahan}, {formData.kecamatan}, {formData.kabupaten}</span></div>
