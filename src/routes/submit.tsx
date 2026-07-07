@@ -8,11 +8,11 @@ import { useQuery } from "@tanstack/react-query";
 import { saveDataToSheet, getRtlhRows } from "@/lib/api"; 
 
 const KABUPATEN_NTT = [
-  "Kota Kupang", "Kab. Kupang", "Kab. Timor Tengah Selatan", "Kab. Timor Tengah Utara", 
-  "Kab. Belu", "Kab. Alor", "Kab. Flores Timur", "Kab. Sikka", "Kab. Ende", 
-  "Kab. Ngada", "Kab. Manggarai", "Kab. Lembata", "Kab. Rote Ndao", "Kab. Manggarai Barat", 
-  "Kab. Nagekeo", "Kab. Sumba Tengah", "Kab. Sumba Barat Daya", "Kab. Manggarai Timur", 
-  "Kab. Sabu Raijua", "Kab. Malaka", "Kab. Sumba Timur", "Kab. Sumba Barat"
+  "Kota Kupang", "Kabupaten Kupang", "Kabupaten Timor Tengah Selatan", "Kabupaten Timor Tengah Utara", 
+  "Kabupaten Belu", "Kabupaten Alor", "Kabupaten Flores Timur", "Kabupaten Sikka", "Kabupaten Ende", 
+  "Kabupaten Ngada", "Kabupaten Manggarai", "Kabupaten Lembata", "Kabupaten Rote Ndao", "Kabupaten Manggarai Barat", 
+  "Kabupaten Nagekeo", "Kabupaten Sumba Tengah", "Kabupaten Sumba Barat Daya", "Kabupaten Manggarai Timur", 
+  "Kabupaten Sabu Raijua", "Kabupaten Malaka", "Kabupaten Sumba Timur", "Kabupaten Sumba Barat"
 ].sort();
 
 export const Route = createFileRoute("/submit")({
