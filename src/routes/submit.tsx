@@ -59,7 +59,6 @@ function SubmitPage() {
         const onlyNums = e.target.value.replace(/[^0-9]/g, '');
         setFormData({ ...formData, [e.target.name]: onlyNums });
     } else if (e.target.name === "lat" || e.target.name === "long") {
-        // Otomatis ubah koma menjadi titik untuk koordinat
         const safeCoord = e.target.value.replace(/,/g, '.');
         setFormData({ ...formData, [e.target.name]: safeCoord });
     } else {
@@ -115,6 +114,21 @@ function SubmitPage() {
         });
         return;
       }
+
+      // --- VALIDASI BLOKIR FORMAT DMS ---
+      // Regex ini memastikan koordinat HANYA boleh berisi angka, titik, dan minus
+      const ddRegex = /^-?\d+(\.\d+)?$/;
+      if (!ddRegex.test(formData.lat) || !ddRegex.test(formData.long)) {
+        setAlertModal({ 
+          show: true, 
+          title: "Format Koordinat Ditolak!", 
+          message: "Koordinat hanya boleh berisi angka desimal dan tanda minus (contoh: -10.123456).\n\nSistem menolak format DMS yang mengandung spasi, huruf arah (S, E, N, W), atau simbol derajat (° ' \").", 
+          type: "error" 
+        });
+        return;
+      }
+      // ----------------------------------
+
       setStep(3);
     } else if (currentStep === 3) {
       setStep(4);
